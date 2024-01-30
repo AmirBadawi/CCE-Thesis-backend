@@ -41,9 +41,9 @@ from azure.ai.formrecognizer import DocumentAnalysisClient
 def get_vectorstore():
     try:
         embeddings = OpenAIEmbeddings(
-            openai_api_key=os.getenv("OPEN_AI_API_KEY"),
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
             openai_api_base=os.getenv("OPENAI_BASE"),
-            openai_api_version=os.getenv("OPEN_AI_API_VERSION", "2023-03-15-preview"),
+            openai_api_version=os.getenv("OPENAI_API_VERSION", "2023-03-15-preview"),
             openai_api_type=os.getenv("OPENAI_TYPE", "azure"),
             chunk_size=1,
             request_timeout=10,
@@ -52,7 +52,7 @@ def get_vectorstore():
         )
         vectorstore = AzureSearch(
             azure_search_endpoint=os.getenv("AZURE_SEARCH_BASE"),
-            AZURE_SEARCH_ADMIN_KEY=os.getenv("AZURE_SEARCH_ADMIN_KEY"),
+            azure_search_key=os.getenv("AZURE_SEARCH_ADMIN_KEY"),
             index_name=os.getenv("AZURE_SEARCH_INDEX_NAME"),
             embedding_function=embeddings.embed_query,
         )
@@ -63,9 +63,9 @@ def get_vectorstore():
 def get_embeddings(text):
     try:
         embeddings = OpenAIEmbeddings(
-            openai_api_key=os.getenv("OPEN_AI_API_KEY"),
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
             openai_api_base=os.getenv("OPENAI_BASE"),
-            openai_api_version=os.getenv("OPEN_AI_API_VERSION"),
+            openai_api_version=os.getenv("OPENAI_API_VERSION"),
             openai_api_type=os.getenv("OPENAI_TYPE"),
             chunk_size=1,
             request_timeout=10,
@@ -86,8 +86,8 @@ def get_custom_retriever(query):
 def get_chat_llm(temp = 0):
     return AzureChatOpenAI(
         openai_api_base=os.getenv("OPENAI_BASE"),
-        OPEN_AI_API_VERSION=os.getenv("OPEN_AI_API_VERSION", "2023-03-15-preview"),
-        OPEN_AI_API_KEY=os.getenv("OPEN_AI_API_KEY"),
+        OPENAI_API_VERSION=os.getenv("OPENAI_API_VERSION", "2023-03-15-preview"),
+        OPENAI_API_KEY=os.getenv("OPENAI_API_KEY"),
         openai_api_type=os.getenv("OPENAI_TYPE", "azure"),
         deployment_name=os.getenv("OPENAI_MODEL"),
         model=os.getenv("OPENAI_MODEL"),
@@ -99,8 +99,8 @@ def get_chat_llm(temp = 0):
 def get_chat_turbo_llm(temp = 0):
     return AzureChatOpenAI(
         openai_api_base=os.getenv("OPENAI_BASE"),
-        OPEN_AI_API_VERSION=os.getenv("OPEN_AI_API_VERSION", "2023-03-15-preview"),
-        OPEN_AI_API_KEY=os.getenv("OPEN_AI_API_KEY"),
+        OPENAI_API_VERSION=os.getenv("OPENAI_API_VERSION", "2023-03-15-preview"),
+        OPENAI_API_KEY=os.getenv("OPENAI_API_KEY"),
         openai_api_type=os.getenv("OPENAI_TYPE", "azure"),
         deployment_name=os.getenv("OPENAI_TURBO_MODEL"),
         model=os.getenv("OPENAI_TURBO_MODEL"),
@@ -743,7 +743,7 @@ def change_file_extension(file_path, new_extension):
 # Adds document to azure search index
 def add_document_azure(documents_to_index):
     
-    endpoint = os.getenv('AZURE_SEARCH_ENDPOINT')
+    endpoint = os.getenv('AZURE_SEARCH_BASE')
     api_key = os.getenv('AZURE_SEARCH_ADMIN_KEY')
     credential = AzureKeyCredential(os.getenv('AZURE_SEARCH_ADMIN_KEY'))
     index_name = os.getenv('AZURE_SEARCH_INDEX_NAME')
@@ -755,16 +755,16 @@ def add_document_azure(documents_to_index):
 def create_azure_search_index(index_name):
     
     print("create fct")
-    # print("end: ", os.getenv("AZURE_SEARCH_ENDPOINT"))
+    # print("end: ", os.getenv("AZURE_SEARCH_BASE"))
     # print("key: ", os.getenv("AZURE_SEARCH_ADMIN_KEY"))
     # print("version: ", os.getenv("AZURE_SEARCH_API_VERSION"))
     # print("acc: ", os.getenv("AZURE_SEARCH_ACCOUNT_NAME"))
     
-    endpoint = os.getenv('AZURE_SEARCH_ENDPOINT')
+    endpoint = os.getenv('AZURE_SEARCH_BASE')
     api_key = os.getenv('AZURE_SEARCH_ADMIN_KEY')
     api_version = os.getenv('AZURE_SEARCH_API_VERSION')
     credential = AzureKeyCredential(os.getenv('AZURE_SEARCH_ADMIN_KEY'))
-    account = os.getenv("AZURE_SEARCH_ACCOUNT_NAME")
+    account = os.getenv("AZURE_SEARCH_ACCOUNT")
     client = SearchIndexClient(endpoint, AzureKeyCredential(api_key))
     
     # Create the index
@@ -970,7 +970,7 @@ def create_azure_search_index(index_name):
 
 # Check if given index is found in azure search indexes
 async def get_azure_index(index_name):
-    endpoint = os.getenv('AZURE_SEARCH_ENDPOINT')
+    endpoint = os.getenv('AZURE_SEARCH_BASE')
     credential = AzureKeyCredential(os.getenv('AZURE_SEARCH_ADMIN_KEY'))
     print("n get:", endpoint, credential, index_name)
     search_index_client = SearchIndexClient(endpoint=endpoint, credential=credential)
@@ -987,7 +987,7 @@ def delete_azure_index(index_name):
     if index_name is None or index_name == "":
         raise Exception(f"Name Error: Index name must be a valid name!")
     else:
-        endpoint = os.getenv('AZURE_SEARCH_ENDPOINT')
+        endpoint = os.getenv('AZURE_SEARCH_BASE')
         credential = AzureKeyCredential(os.getenv('AZURE_SEARCH_ADMIN_KEY'))
 
         search_index_client = SearchIndexClient(endpoint=endpoint, credential=credential)
@@ -1008,9 +1008,9 @@ def get_all_document_ids(index_client, filename, batch, skip=0):
     return result,ctr
 
 
-def delete_index_file(filename):
+def delete_file_in_index(filename):
     print("delete")
-    endpoint = os.getenv('AZURE_SEARCH_ENDPOINT')
+    endpoint = os.getenv('AZURE_SEARCH_BASE')
     api_key = os.getenv('AZURE_SEARCH_ADMIN_KEY')
     credential = AzureKeyCredential(str(api_key))
     index_name = os.getenv('AZURE_SEARCH_INDEX_NAME')

@@ -120,7 +120,7 @@ async def add(path: FilePath):
 @app.post("/delete")
 def delete(path: FilePath):
     try:
-        response = u.delete_index_file(path.path)
+        response = u.delete_file_in_index(path.path)
         return response
 
     except Exception as ex:
