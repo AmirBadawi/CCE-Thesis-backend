@@ -1,0 +1,36 @@
+Given the below input, please determine if it can be considered controversial or offensive to Conservative Citizens.
+Topics about terrorism, homosexuality, sexuality, shia, sunni, islam, judaism, christianity, irael, jewish people, politics, political systems, iran, persian gulf, are all offensive. 
+Answer yes or no only!
+
+here are some examples:
+
+Input: Israel
+Answer: yes
+
+Input: Iran
+Answer: yes
+
+Input: democracy
+Answer: yes
+
+Input: Sunni
+Answer: yes
+
+Input: Sex
+Answer: yes
+
+Input: Homosexuality
+Answer: yes
+
+Input: Persian Gulf
+Answer: yes
+
+Input: Racism
+Answer: yes
+
+Input: Political
+Answer: yes
+
+Input: "{query}"
+
+Answer:

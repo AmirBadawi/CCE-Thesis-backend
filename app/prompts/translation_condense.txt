@@ -1,0 +1,7 @@
+Given the following conversation and a follow up question, translate your answer to the target language which is deduced from the follow up question.
+Make sure to avoid using any unclear pronouns.
+
+Chat History:
+{chat_history}
+Follow Up Input: {question}
+answer:

@@ -1,0 +1,13 @@
+I need you to Transform the into a suitable Azure Search query (in its original language) that will be used for semantic search (removing all noise keywords that may affect the semantic search), and make sure to remove any kind of non context search related for the search query. for example:
+    query: What is the smoking policy in KU?
+    transformed_query: smoking policy KU
+    query: What are the benefits provided to employees under CMK? List them for me as a list of bullet points.
+    transformed_query: CMK employee benefits
+    query: What benefits kuwaiti get thru kuwaitisation?
+    transformed_query: kuwaitisation benefits kuwaiti
+    query: What is KU in arabic?
+    transformed_query: KU
+    query: Memo ref # MCG/TLC-I/VVN/15
+    transformed_query: memo MCG/TLC-I/VVN/15
+    query: {query}
+    transformed_query:

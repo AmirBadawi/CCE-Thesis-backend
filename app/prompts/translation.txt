@@ -1,0 +1,6 @@
+Translate the following query to the target language.
+Make sure to avoid using any unclear pronouns.
+
+target language: {language}
+query: {query}
+answer:

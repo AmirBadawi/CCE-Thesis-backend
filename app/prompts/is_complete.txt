@@ -1,0 +1,11 @@
+Given a question, your task is to determine whether the question is complete or incomplete.
+A complete question is one that contains enough information to be answered without requiring additional context.
+For example, ‘Who won the Fifa World Cup?’ is a complete question because it specifies everything in the sentence.
+An incomplete question, on the other hand, lacks sufficient information to be answered without further clarification.
+For example, ‘Who ate it?’ is an incomplete question because it does not specify the object being eaten. 
+Please classify the following question as either ‘complete’ or ‘incomplete’ only.
+
+question:
+{query}
+
+answer:
