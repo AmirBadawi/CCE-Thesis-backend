@@ -16,6 +16,9 @@ from dotenv import load_dotenv
 import logging
 
 
+from fastapi import FastAPI, File, UploadFile
+from fastapi.responses import FileResponse
+
 app = FastAPI()
 load_dotenv()
 vector_store = None
@@ -30,18 +33,34 @@ async def startup_event():
 def root():
     return {'Status': "Working"}
 
+@app.post("/uploadfile/")
+async def create_upload_file(file: UploadFile = File(...)):
+    
+    # file_path = os.path.join("/file/", file.filename)
+    file_path = file.filename
+    filepath = FilePath(path=file_path)
+    with open(filepath.path, "wb") as f:
+        f.write(file.file.read())
+    response = await add(filepath)
+    
+    # return {"filename": file.filename}
+    return response
 
+# pip install python-multipart
 
 # Creates an index with custom schema
 @app.post('/create')
 def create(index: Index | None=None):
-    # print("create")
+    print("create")
     try:
+        print("try")
         if index is not None and index.index_name is not None:
             index_name = index.index_name
         else:
             index_name = os.getenv('AZURE_SEARCH_INDEX_NAME')
+        print("index name:", index_name)
         response = u.create_azure_search_index(index_name)
+        print(response.text)
         if response.status_code == 201:
             return {"Succefully Created": index_name}
         else:
@@ -83,9 +102,10 @@ def recreate(index: Index | None=None):
 
 
 @app.post("/add")
-def add(path: FilePath):
+async def add(path: FilePath):
     try:
-        response = u.add_file_to_index(path.path)
+        print("env main: ",os.getenv('AZURE_SEARCH_ADMIN_KEY'))
+        response = await u.add_file_to_index(path.path)
         # print(response.status_code)
         # print(response.body.decode('utf-8')) #as str
         return response
@@ -96,6 +116,17 @@ def add(path: FilePath):
         raise HTTPException(status_code=500, detail=str(ex))
     finally:
         u.delete_file(path.path)
+
+@app.post("/delete")
+def delete(path: FilePath):
+    try:
+        response = u.delete_index_file(path.path)
+        return response
+
+    except Exception as ex:
+        logging.error(f"An error occurred: {ex}")
+        # return {"Error": str(ex)}
+        raise HTTPException(status_code=500, detail=str(ex))
 
 
 @app.post("/chat")

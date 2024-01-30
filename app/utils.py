@@ -41,9 +41,9 @@ from azure.ai.formrecognizer import DocumentAnalysisClient
 def get_vectorstore():
     try:
         embeddings = OpenAIEmbeddings(
-            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            openai_api_key=os.getenv("OPEN_AI_API_KEY"),
             openai_api_base=os.getenv("OPENAI_BASE"),
-            openai_api_version=os.getenv("OPENAI_API_VERSION", "2023-03-15-preview"),
+            openai_api_version=os.getenv("OPEN_AI_API_VERSION", "2023-03-15-preview"),
             openai_api_type=os.getenv("OPENAI_TYPE", "azure"),
             chunk_size=1,
             request_timeout=10,
@@ -52,7 +52,7 @@ def get_vectorstore():
         )
         vectorstore = AzureSearch(
             azure_search_endpoint=os.getenv("AZURE_SEARCH_BASE"),
-            azure_search_key=os.getenv("AZURE_SEARCH_ADMIN_KEY"),
+            AZURE_SEARCH_ADMIN_KEY=os.getenv("AZURE_SEARCH_ADMIN_KEY"),
             index_name=os.getenv("AZURE_SEARCH_INDEX_NAME"),
             embedding_function=embeddings.embed_query,
         )
@@ -60,13 +60,12 @@ def get_vectorstore():
     except Exception:
         raise
 
-
 def get_embeddings(text):
     try:
         embeddings = OpenAIEmbeddings(
-            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            openai_api_key=os.getenv("OPEN_AI_API_KEY"),
             openai_api_base=os.getenv("OPENAI_BASE"),
-            openai_api_version=os.getenv("OPENAI_API_VERSION"),
+            openai_api_version=os.getenv("OPEN_AI_API_VERSION"),
             openai_api_type=os.getenv("OPENAI_TYPE"),
             chunk_size=1,
             request_timeout=10,
@@ -87,8 +86,8 @@ def get_custom_retriever(query):
 def get_chat_llm(temp = 0):
     return AzureChatOpenAI(
         openai_api_base=os.getenv("OPENAI_BASE"),
-        openai_api_version=os.getenv("OPENAI_API_VERSION", "2023-03-15-preview"),
-        openai_api_key=os.getenv("OPENAI_API_KEY"),
+        OPEN_AI_API_VERSION=os.getenv("OPEN_AI_API_VERSION", "2023-03-15-preview"),
+        OPEN_AI_API_KEY=os.getenv("OPEN_AI_API_KEY"),
         openai_api_type=os.getenv("OPENAI_TYPE", "azure"),
         deployment_name=os.getenv("OPENAI_MODEL"),
         model=os.getenv("OPENAI_MODEL"),
@@ -100,8 +99,8 @@ def get_chat_llm(temp = 0):
 def get_chat_turbo_llm(temp = 0):
     return AzureChatOpenAI(
         openai_api_base=os.getenv("OPENAI_BASE"),
-        openai_api_version=os.getenv("OPENAI_API_VERSION", "2023-03-15-preview"),
-        openai_api_key=os.getenv("OPENAI_API_KEY"),
+        OPEN_AI_API_VERSION=os.getenv("OPEN_AI_API_VERSION", "2023-03-15-preview"),
+        OPEN_AI_API_KEY=os.getenv("OPEN_AI_API_KEY"),
         openai_api_type=os.getenv("OPENAI_TYPE", "azure"),
         deployment_name=os.getenv("OPENAI_TURBO_MODEL"),
         model=os.getenv("OPENAI_TURBO_MODEL"),
@@ -257,21 +256,24 @@ def detect_language(text):
     
 
 
-
 # KME
     
-
 # Process the given path and adds it to the index
-def add_file_to_index(file_path):
-    load_blob_file(file_path)
+async def add_file_to_index(file_path):
     
-    #Check if file exists before processing in local dierectory
+    # load_blob_file(file_path)
+    print("in add file")
+    
+    # response = download_file(file_path)
+    # print("response: ", response)
+
+    # Check if file exists before processing in local dierectory
     if is_path_exists(file_path):
         
         # TODO: support file based on extension #done
 
         raw_text = process_file_by_extension(file_path) #returns a list of json for each pdf page
-        
+        print(raw_text)
         # checks if the extension is supported
         if raw_text is None:
             return {"File Extension not supported"}
@@ -289,11 +291,29 @@ def add_file_to_index(file_path):
         text_chunks = get_format_text_chunks(file_path, data)
         documents_to_upload = create_documents_chunks(text_chunks)
         print(documents_to_upload)
-        add_document_azure(documents_to_upload)
+        index_name = os.getenv("AZURE_SEARCH_INDEX_NAME")
+        print("name", index_name)
+        index_exists = await get_azure_index(index_name)
+        print("existsssssssssssssssss", index_exists)
+        if index_exists:
+            add_document_azure(documents_to_upload)
+            # return Response(content="added file: "+file_path, status_code=200)
+        else:
+            create_azure_search_index(index_name)
+            add_document_azure(documents_to_upload)
+            # return Response(content="added file: "+file_path, status_code=200)
 
         return Response(content="added file: "+file_path, status_code=200)
     else:
         raise HTTPException(status_code=400, detail=f"The requested file does not exist in the blob storage")
+
+
+from fastapi.responses import FileResponse
+def download_file(filename: str):
+    print("down file", filename)
+    file_path = os.path.join("C:\\Users\\FCC\\VS Code Projects\\Intelligencia-AI-Demo-Backend\\file", filename)
+    return FileResponse(file_path, media_type="application/pdf", filename=filename)
+
 
 # Loads file from blob storage and downloads it to the local storage
 def load_blob_file(file_path):
@@ -406,7 +426,9 @@ def analyze_general_documents(file_path):
 
 
 def recursive_chunks(text):
-    tiktoken_cache_dir = "/app/tiktoken"
+    # tiktoken_cache_dir = "/app/tiktoken"
+    tiktoken_cache_dir = "C:/Users/FCC/VS Code Projects/KU-GPT/app/tiktoken/"
+    
     os.environ["TIKTOKEN_CACHE_DIR"] = tiktoken_cache_dir
     
     # validate
@@ -664,13 +686,10 @@ def get_format_text_chunks(file_path, data):
         # url = urljoin(base_url, file_path)
         
         url = url.replace("<","").replace(">","")
-        # print(url)
 
-        content_date = get_date(filename)
+        # content_date = get_date(filename)
 
-        # chunk_part = "الجزء " + str(i)  +" "+ "من "
-
-        chunk_data = {"content":chunk, "title": title, "description":"", "url": url, "content_date": content_date, "chunk_id": ctr, "filename": filename }
+        chunk_data = {"content":chunk, "title": title, "chunk_id": ctr, "filename": filename }
         # chunk_data["description"]= (chunk["chunk_part"]  + " " + description).replace('\u200c', '')
         chunked_content.append(chunk_data)
         
@@ -683,19 +702,17 @@ def create_documents_chunks(text_chunks):
     embeddings = []
 
     for i, chunk in enumerate(text_chunks):
-        embedding = get_embeddings(chunk["content"])
+        # embedding = get_embeddings(chunk["content"])
         # embeddings.append(embedding)
         document = {
             "@search.action": "mergeOrUpload",
             "id": str(uuid.uuid4()),
             # "metadata": doc["metadata"],
             "content": chunk["content"],
-            "content_vector": embedding,
+            # "content_vector": embedding,
             "title": chunk["title"],
-            "description": chunk["description"],
-            "url": chunk["url"],
             "filename": chunk["filename"], 
-            "content_date": chunk["content_date"],
+            # "content_date": chunk["content_date"],
             "chunk_id": chunk["chunk_id"]
         }
         documents_to_upload.append(document)
@@ -726,30 +743,34 @@ def change_file_extension(file_path, new_extension):
 # Adds document to azure search index
 def add_document_azure(documents_to_index):
     
-    endpoint = os.getenv('AZURE_SEARCH_BASE')
-    api_key = os.getenv('AZURE_SEARCH_KEY')
-    credential = AzureKeyCredential(os.getenv('AZURE_SEARCH_KEY'))
+    endpoint = os.getenv('AZURE_SEARCH_ENDPOINT')
+    api_key = os.getenv('AZURE_SEARCH_ADMIN_KEY')
+    credential = AzureKeyCredential(os.getenv('AZURE_SEARCH_ADMIN_KEY'))
     index_name = os.getenv('AZURE_SEARCH_INDEX_NAME')
 
     search_client = SearchClient(endpoint=endpoint, index_name=index_name, credential=credential)
     indexing = search_client.upload_documents(documents=documents_to_index)
     return indexing
-
-
 # Creates azure search index with custom schema
 def create_azure_search_index(index_name):
     
-    endpoint = os.getenv('AZURE_SEARCH_BASE')
-    api_key = os.getenv('AZURE_SEARCH_KEY')
+    print("create fct")
+    # print("end: ", os.getenv("AZURE_SEARCH_ENDPOINT"))
+    # print("key: ", os.getenv("AZURE_SEARCH_ADMIN_KEY"))
+    # print("version: ", os.getenv("AZURE_SEARCH_API_VERSION"))
+    # print("acc: ", os.getenv("AZURE_SEARCH_ACCOUNT_NAME"))
+    
+    endpoint = os.getenv('AZURE_SEARCH_ENDPOINT')
+    api_key = os.getenv('AZURE_SEARCH_ADMIN_KEY')
     api_version = os.getenv('AZURE_SEARCH_API_VERSION')
-    credential = AzureKeyCredential(os.getenv('AZURE_SEARCH_KEY'))
-    account = os.getenv("AZURE_SEARCH_ACCOUNT")
+    credential = AzureKeyCredential(os.getenv('AZURE_SEARCH_ADMIN_KEY'))
+    account = os.getenv("AZURE_SEARCH_ACCOUNT_NAME")
     client = SearchIndexClient(endpoint, AzureKeyCredential(api_key))
     
     # Create the index
     
     index_url = f"https://{account}.search.windows.net/indexes?api-version={api_version}"
-    print(index_url)
+    print("index", index_url)
     headers = {
         "Content-Type": "application/json",
         "api-key": api_key,
@@ -757,7 +778,6 @@ def create_azure_search_index(index_name):
     
     index_definition = {
            "name": index_name,
-            # "defaultScoringProfile": "koc_scoring_profile",
             "defaultScoringProfile": None,
             "fields": [
                 {
@@ -845,58 +865,25 @@ def create_azure_search_index(index_name):
                 "vectorSearchProfile": None,
                 "synonymMaps": []
                 },
-                {
-                "name": "description",
-                "type": "Edm.String",
-                "searchable": True,
-                "filterable": True,
-                "retrievable": True,
-                "sortable": False,
-                "facetable": False,
-                "key": False,
-                "indexAnalyzer": None,
-                "searchAnalyzer": None,
-                "analyzer": "ar.microsoft",
+
+                # {
+                # "name": "content_date",
+                # "type": "Edm.DateTimeOffset",
+                # "searchable": False,
+                # "filterable": True,
+                # "retrievable": True,
+                # "sortable": False,
+                # "facetable": False,
+                # "key": False,
+                # "indexAnalyzer": None,
+                # "searchAnalyzer": None,
+                # "analyzer": None,
                 
-                "dimensions": None,
-                "vectorSearchProfile": None,
-                "synonymMaps": []
-                },
+                # "dimensions": None,
+                # "vectorSearchProfile": None,
+                # "synonymMaps": []
+                # },
                 {
-                "name": "url",
-                "type": "Edm.String",
-                "searchable": False,
-                "filterable": False,
-                "retrievable": True,
-                "sortable": False,
-                "facetable": False,
-                "key": False,
-                "indexAnalyzer": None,
-                "searchAnalyzer": None,
-                "analyzer": None,
-                
-                "dimensions": None,
-                "vectorSearchProfile": None,
-                "synonymMaps": []
-                },
-                {
-                "name": "content_date",
-                "type": "Edm.DateTimeOffset",
-                "searchable": False,
-                "filterable": True,
-                "retrievable": True,
-                "sortable": False,
-                "facetable": False,
-                "key": False,
-                "indexAnalyzer": None,
-                "searchAnalyzer": None,
-                "analyzer": None,
-                
-                "dimensions": None,
-                "vectorSearchProfile": None,
-                "synonymMaps": []
-                },
-                 {
                 "name": "chunk_id",
                 "type": "Edm.Int32",
                 "searchable": False,
@@ -940,9 +927,6 @@ def create_azure_search_index(index_name):
                     },
                     "prioritizedContentFields": [
                         {
-                        "fieldName": "description"
-                        },
-                        {
                         "fieldName": "content"
                         }
                     ],
@@ -976,7 +960,7 @@ def create_azure_search_index(index_name):
     }
    
     response = requests.post(index_url, headers=headers, json=index_definition)
-    print(response.text)
+    print("response", response.text)
     if response.status_code == 201:
         print(f"Index '{index_name}' created successfully.")
     else:
@@ -986,9 +970,9 @@ def create_azure_search_index(index_name):
 
 # Check if given index is found in azure search indexes
 async def get_azure_index(index_name):
-    endpoint = os.getenv('AZURE_SEARCH_BASE')
-    credential = AzureKeyCredential(os.getenv('AZURE_SEARCH_KEY'))
-    
+    endpoint = os.getenv('AZURE_SEARCH_ENDPOINT')
+    credential = AzureKeyCredential(os.getenv('AZURE_SEARCH_ADMIN_KEY'))
+    print("n get:", endpoint, credential, index_name)
     search_index_client = SearchIndexClient(endpoint=endpoint, credential=credential)
     try:
     # Attempt to get the index (this will raise a ResourceNotFoundError if it doesn't exist)
@@ -1003,11 +987,59 @@ def delete_azure_index(index_name):
     if index_name is None or index_name == "":
         raise Exception(f"Name Error: Index name must be a valid name!")
     else:
-        endpoint = os.getenv('AZURE_SEARCH_BASE')
-        credential = AzureKeyCredential(os.getenv('AZURE_SEARCH_KEY'))
+        endpoint = os.getenv('AZURE_SEARCH_ENDPOINT')
+        credential = AzureKeyCredential(os.getenv('AZURE_SEARCH_ADMIN_KEY'))
 
         search_index_client = SearchIndexClient(endpoint=endpoint, credential=credential)
         search_index_client.delete_index(index_name)
 
 
+def get_all_document_ids(index_client, filename, batch, skip=0):
+    result = []
 
+    response = index_client.search(search_text="*", filter=f"filename eq '{filename}'", select="id", top=batch,skip=skip)
+    print("response", response)
+    ctr=0
+    for document in response:
+        print(document)
+        ctr=ctr+1
+        result.append(document['id'])
+        print("id",document['id'])
+    return result,ctr
+
+
+def delete_index_file(filename):
+    print("delete")
+    endpoint = os.getenv('AZURE_SEARCH_ENDPOINT')
+    api_key = os.getenv('AZURE_SEARCH_ADMIN_KEY')
+    credential = AzureKeyCredential(str(api_key))
+    index_name = os.getenv('AZURE_SEARCH_INDEX_NAME')
+    search_service_name = os.getenv("AZURE_SEARCH_ACCOUNT_NAME")
+
+    print("end", index_name)
+
+    batch=1000
+
+    client = SearchClient(endpoint, index_name, credential)
+
+    old_ctr=0
+    ids=[]
+    while(True):
+        
+        results,ctr = get_all_document_ids(client, filename, batch, skip=old_ctr)
+        print(results)
+        ids.append(results)
+        old_ctr=old_ctr+ctr
+
+        if ctr<1000:
+            break
+
+    if ids[0]:
+        for batch_docs in ids:
+            dict_of_ids = [{"id": value} for value in batch_docs]
+            print(len(dict_of_ids))
+            client.delete_documents(documents=dict_of_ids)
+        
+        return {"deleted": filename}
+    else:
+        return {"deleted": f"No such file '{filename}'"}
