@@ -702,14 +702,14 @@ def create_documents_chunks(text_chunks):
     embeddings = []
 
     for i, chunk in enumerate(text_chunks):
-        # embedding = get_embeddings(chunk["content"])
+        embedding = get_embeddings(chunk["content"])
         # embeddings.append(embedding)
         document = {
             "@search.action": "mergeOrUpload",
             "id": str(uuid.uuid4()),
             # "metadata": doc["metadata"],
             "content": chunk["content"],
-            # "content_vector": embedding,
+            "content_vector": embedding,
             "title": chunk["title"],
             "filename": chunk["filename"], 
             # "content_date": chunk["content_date"],
