@@ -9,6 +9,8 @@ Instructions to run:
 - activate env: .venv/Scripts/activate
 - run: pip install -r requirements.txt
 - run: python app/main.py
+###############
+- pip install -U langchain-community
 
 .env:
 

@@ -7,7 +7,7 @@ from fastapi.datastructures import Default
 # Langchain
 from langchain.agents import initialize_agent
 from langchain.chains import LLMChain
-from langchain.chat_models import AzureChatOpenAI
+from langchain_community.chat_models import AzureChatOpenAI
 
 # Our Modules
 import utils as u

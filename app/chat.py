@@ -4,6 +4,11 @@ import asyncio
 
 # Langchain
 from langchain.chains import ConversationalRetrievalChain, LLMChain, RetrievalQA
+from langchain.schema import HumanMessage
+from langchain_community.llms.azureml_endpoint import (
+    AzureMLEndpointApiType,
+    LlamaContentFormatter,
+)
 
 # Our Modules
 import memory as mem
@@ -11,7 +16,7 @@ import utils as u
 
 
 # Main Chat Agent
-async def custom_agent(query, memory, conv_id):
+async def custom_agent(query, memory, conv_id, turbo):
     try:
         response = ""
         user_intent = None
@@ -22,7 +27,7 @@ async def custom_agent(query, memory, conv_id):
         print("user intent ==> " + user_intent)
         if "general" in user_intent.strip().lower():
             print("Entered General: ")
-            response = await others_llm_async(conversation)
+            response = await others_llm_async(conversation, turbo)
         else:
             print("Entered Intelligencia Knowledge Base: ")
             is_complete = await is_complete_async(query=query)
@@ -31,33 +36,40 @@ async def custom_agent(query, memory, conv_id):
                 query = await condense_chat_async(conversation)
                 print("======completed query======" + str(query))
             # uncondensed query
-            response = await runCompleteContextRelated_async(query=query, conversation=conversation)
+            response = await runCompleteContextRelated_async(query=query, turbo=turbo, conversation=conversation)
         return response
     except Exception:
         raise
 
 
-async def runCompleteContextRelated_async(query,conversation):
+async def runCompleteContextRelated_async(query, turbo, conversation):
     print("Entered CompleteContextRelated:")
     try:
         print("Retrieving qa...")
-        qa = await get_retrieval_qa_async(query=query)
+        qa = await get_retrieval_qa_async(query=query, turbo=turbo)
         # qa = await get_qa_chain_async(memory, query)
         print("Running the qa...    ")
         response = await asyncio.wait_for(
-            qa.arun(conversation), timeout=int(os.getenv("TIMEOUT", 18))
+            qa.ainvoke(conversation), timeout=int(os.getenv("TIMEOUT", 18))
         )
-        return response
+        print("-"*100)
+        print(response["result"])
+        return response["result"]
     except Exception:
         raise
 
 
-async def others_llm_async(conversation):
+async def others_llm_async(conversation, turbo):
     # print("Entered Others:")
     prompt = u.get_prompt("base.txt")
     # history = mem.memory_to_text(memory)
     try:
-        llm = u.get_chat_turbo_llm()
+        if turbo == True:
+            print("Turbo GPT ON")
+            llm = u.get_chat_turbo_llm()
+        else:
+            print("Turbo GPT OFF")
+            llm = u.get_chat_llm()
         llm_chain = LLMChain(llm=llm, prompt=prompt, verbose=False)
         print("Running the llm_chain...")
         response = await asyncio.wait_for(
@@ -69,20 +81,31 @@ async def others_llm_async(conversation):
     return response
 
 
-async def get_retrieval_qa_async(query, return_source=False):
+async def get_retrieval_qa_async(query, turbo, return_source=False):
     # get the prompt template
     PROMPT = u.get_qabase_prompt()
     # create the chain_type_kwargs
     chain_type_kwargs = {"prompt": PROMPT}
     try:
         # create the RetrievalQA instance and return it (independent from memory)
-        return RetrievalQA.from_chain_type(
-            llm=u.get_chat_turbo_llm(),
-            chain_type="stuff",
-            retriever=u.get_custom_retriever(query=query),
-            chain_type_kwargs=chain_type_kwargs,
-            return_source_documents=return_source,
-        )
+        if turbo == True:
+            print("Turbo GPT ON")
+            return RetrievalQA.from_chain_type(
+                llm=u.get_chat_turbo_llm(),
+                chain_type="stuff",
+                retriever=u.get_custom_retriever(query=query),
+                chain_type_kwargs=chain_type_kwargs,
+                return_source_documents=return_source,
+            )
+        else:
+            print("Turbo GPT OFF")
+            return RetrievalQA.from_chain_type(
+                llm=u.get_chat_llm(),
+                chain_type="stuff",
+                retriever=u.get_custom_retriever(query=query),
+                chain_type_kwargs=chain_type_kwargs,
+                return_source_documents=return_source,
+            )
     except Exception:
         raise
 
@@ -106,11 +129,13 @@ async def detect_user_intent_async(conversation):
     try:
         llm = u.get_chat_llm()
         response = await asyncio.wait_for(
-            llm.apredict(final_prompt), timeout=int(os.getenv("TIMEOUT", 18))
+            llm.ainvoke(final_prompt), timeout=int(os.getenv("TIMEOUT", 18))
         )
+        print(response.content)
+        print("-"*50)
     except Exception:
         raise
-    return response
+    return response.content
 
 
 async def is_complete_async(query):
@@ -120,7 +145,7 @@ async def is_complete_async(query):
         question_generator = LLMChain(
             llm=u.get_chat_llm(), prompt=prompt_template, verbose=False
         )
-        new_query = question_generator({"query": query})
+        new_query = question_generator.invoke({"query": query})
         new_query = new_query["text"]
         # print(new_query)
         return new_query

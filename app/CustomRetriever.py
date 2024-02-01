@@ -1,6 +1,6 @@
 import json
 from langchain.schema import BaseRetriever # The base class for creating custom retrievers in LangChain.
-from langchain.vectorstores import AzureSearch # Used to represent a vector store that can do similarity search.
+from langchain_community.vectorstores.azuresearch import AzureSearch
 from langchain.schema import Document # The LangChain document class that holds metadata.
 from pydantic import BaseModel # From Pydantic, used for data validation.
 from dotenv import load_dotenv
@@ -94,7 +94,7 @@ class CustomRetriever(BaseRetriever, BaseModel):
             for doc in sorted_data:
                 print(doc["title"]+"    "+str(doc["@search.score"])+"    "+str(doc["@search.rerankerScore"]))
                 docs.append(Document(
-                    page_content="{\"title\" : \""+doc["title"]+"\" , \n\"description\" : \""+doc["description"]+"\" , \n\"content\" : \""+doc["content"]+"\" , \n\"source\" : \""+doc["title"]+"\"}",
+                    page_content="{\"title\" : \""+doc["title"]+"\" , \n\"content\" : \""+doc["content"]+"\" , \n\"source\" : \""+doc["title"]+"\"}",
                     # metadata={"source": doc["filepath"]}
                 ))
             # print(docs)

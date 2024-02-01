@@ -104,7 +104,6 @@ def recreate(index: Index | None=None):
 @app.post("/add")
 async def add(path: FilePath):
     try:
-        print("env main: ",os.getenv('AZURE_SEARCH_ADMIN_KEY'))
         response = await u.add_file_to_index(path.path)
         # print(response.status_code)
         # print(response.body.decode('utf-8')) #as str
@@ -147,7 +146,7 @@ async def chat(request: ChatRequest):
         # Load the memory
         memory = mem.get_memory_cosmos(conv_id)
         # print("Running the custom agent...")
-        response = await asyncio.wait_for(ch.custom_agent(query, memory, conv_id), timeout=int(os.getenv('TIMEOUT', 18)))
+        response = await asyncio.wait_for(ch.custom_agent(query, memory, conv_id, request.turbo), timeout=int(os.getenv('TIMEOUT', 18)))
         # content filter
         # print("response before filtering ==> "+response)
         response = u.filter_response(response)
@@ -184,6 +183,7 @@ async def chat(request: ChatRequest):
         response = await e.generate_timeout_response()
     except Exception as ex:
         print("Exception caught: "+ str(ex))
+        raise
         if isinstance(ex, openai.error.RateLimitError):
             response = "You have exceeded the call rate limit of your current OpenAI tier. Please try again in a few seconds."
         elif "content filter" in str(ex).lower():

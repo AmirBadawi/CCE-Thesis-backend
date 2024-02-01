@@ -14,6 +14,7 @@ class ChatRequest(BaseModel):
     Time: datetime.datetime
     Name: str
     email: str
+    turbo: bool
 
 
 class PDFPath(BaseModel):
