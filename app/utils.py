@@ -88,7 +88,7 @@ def get_embeddings(text):
     try:
         embeddings = AzureOpenAIEmbeddings(
             openai_api_key=os.getenv("OPENAI_API_KEY"),
-            azure_endpoint=os.getenv("azure_endpoint"),
+            azure_endpoint=os.getenv("OPENAI_BASE"),
             openai_api_version=os.getenv("OPENAI_API_VERSION"),
             openai_api_type=os.getenv("OPENAI_TYPE"),
             chunk_size=1,
@@ -295,39 +295,46 @@ async def add_file_to_index(file_path):
     if is_path_exists(file_path):
         
         # TODO: support file based on extension #done
-
-        raw_text = process_file_by_extension(file_path) #returns a list of json for each pdf page
-        print(raw_text)
-        # checks if the extension is supported
-        if raw_text is None:
-            return {"File Extension not supported"}
-
-        # data, meta, title, description = get_file_details(file_path, raw_text)
-        # text_chunks = get_format_text_chunks(file_path, data, meta, title, description)
         
-        # if using form recognizer
-        data = raw_text["content"]
-
-        # for testing using langchian pdf loader
-        # data = raw_text[4].page_content
-
-
-        text_chunks = get_format_text_chunks(file_path, data)
-        documents_to_upload = create_documents_chunks(text_chunks)
-        print(documents_to_upload)
-        index_name = os.getenv("AZURE_SEARCH_INDEX_NAME")
-        print("name", index_name)
-        index_exists = await get_azure_index(index_name)
-        print("existsssssssssssssssss", index_exists)
-        if index_exists:
-            add_document_azure(documents_to_upload)
-            # return Response(content="added file: "+file_path, status_code=200)
+        file_exists = file_exists_in_index(file_path)
+        print("file_exists", file_exists)
+        if file_exists:
+        
+            return Response(content="file already exists: "+file_path, status_code=200)
+        
         else:
-            create_azure_search_index(index_name)
-            add_document_azure(documents_to_upload)
-            # return Response(content="added file: "+file_path, status_code=200)
+            raw_text = process_file_by_extension(file_path) #returns a list of json for each pdf page
+            # print(raw_text)
+            # checks if the extension is supported
+            if raw_text is None:
+                return {"File Extension not supported"}
 
-        return Response(content="added file: "+file_path, status_code=200)
+            # data, meta, title, description = get_file_details(file_path, raw_text)
+            # text_chunks = get_format_text_chunks(file_path, data, meta, title, description)
+            
+            # if using form recognizer
+            data = raw_text["content"]
+
+            # for testing using langchian pdf loader
+            # data = raw_text[4].page_content
+
+
+            text_chunks = get_format_text_chunks(file_path, data)
+            documents_to_upload = create_documents_chunks(text_chunks)
+            # print(documents_to_upload)
+            index_name = os.getenv("AZURE_SEARCH_INDEX_NAME")
+            print("name", index_name)
+            index_exists = await get_azure_index(index_name)
+            print("existsssssssssssssssss", index_exists)
+            
+            if index_exists:
+                add_document_azure(documents_to_upload)
+                # return Response(content="added file: "+file_path, status_code=200)
+            else:
+                create_azure_search_index(index_name)
+                add_document_azure(documents_to_upload)
+                # return Response(content="added file: "+file_path, status_code=200)
+            return Response(content="added file: "+file_path, status_code=200)
     else:
         raise HTTPException(status_code=400, detail=f"The requested file does not exist in the blob storage")
 
@@ -450,8 +457,8 @@ def analyze_general_documents(file_path):
 
 def recursive_chunks(text):
     # tiktoken_cache_dir = "/app/tiktoken"
-    tiktoken_cache_dir = "/Users/mac/Projects/Intelligencia/Intelligencia-AI-Demo-Backend/app/tiktoken"
-    
+    #tiktoken_cache_dir = "/Users/mac/Projects/Intelligencia/Intelligencia-AI-Demo-Backend/app/tiktoken"
+    tiktoken_cache_dir = "C:/Users/FCC/VS Code Projects/Intelligencia-AI-Demo-Backend/app/tiktoken"
     os.environ["TIKTOKEN_CACHE_DIR"] = tiktoken_cache_dir
     
     # validate
@@ -1017,7 +1024,7 @@ def delete_azure_index(index_name):
         search_index_client.delete_index(index_name)
 
 
-def get_all_document_ids(index_client, filename, batch, skip=0):
+def get_file_document_ids(index_client, filename, batch, skip=0):
     result = []
 
     response = index_client.search(search_text="*", filter=f"filename eq '{filename}'", select="id", top=batch,skip=skip)
@@ -1031,6 +1038,35 @@ def get_all_document_ids(index_client, filename, batch, skip=0):
     return result,ctr
 
 
+def file_exists_in_index(filename):
+    endpoint = os.getenv('AZURE_SEARCH_BASE')
+    api_key = os.getenv('AZURE_SEARCH_ADMIN_KEY')
+    credential = AzureKeyCredential(str(api_key))
+    index_name = os.getenv('AZURE_SEARCH_INDEX_NAME')
+    search_service_name = os.getenv("AZURE_SEARCH_ACCOUNT_NAME")
+
+    search_client = SearchClient(endpoint=endpoint, index_name=index_name, credential=credential)
+
+
+    # Define the search query to check if the field with specific value exists
+    search_query = f" filename eq '{filename}'"
+
+    
+
+    # Execute the search query
+    response = search_client.search(search_text="*", filter=f"filename eq '{filename}'")
+    # print("response file existss", response)
+    # Check if any documents match the query
+    
+    for result in response:
+        # print("in for", result)
+        if result.get("filename"):
+            # print(result.get("document"))
+            return True  # The field with the specified value exists
+
+    return False  # No matching documents found
+
+
 def delete_file_in_index(filename):
     print("delete")
     endpoint = os.getenv('AZURE_SEARCH_BASE')
@@ -1041,7 +1077,7 @@ def delete_file_in_index(filename):
 
     print("end", index_name)
 
-    batch=1000
+    batch=os.getenv("BATCH")
 
     client = SearchClient(endpoint, index_name, credential)
 
@@ -1049,7 +1085,7 @@ def delete_file_in_index(filename):
     ids=[]
     while(True):
         
-        results,ctr = get_all_document_ids(client, filename, batch, skip=old_ctr)
+        results,ctr = get_file_document_ids(client, filename, batch, skip=old_ctr)
         print(results)
         ids.append(results)
         old_ctr=old_ctr+ctr
@@ -1066,3 +1102,46 @@ def delete_file_in_index(filename):
         return {"deleted": filename}
     else:
         return {"deleted": f"No such file '{filename}'"}
+
+
+
+def get_all_document_ids(index_client,skip=0):
+    result = []
+
+
+    batch=os.getenv("BATCH")
+
+    response = index_client.search(search_text="*", select="id", top=batch,skip=skip)
+    ctr=0
+    for document in response:
+
+        ctr=ctr+1
+        result.append(document['id'])
+
+    return result,ctr
+
+def clear_index():
+    endpoint = os.getenv('AZURE_SEARCH_BASE')
+    api_key = os.getenv('AZURE_SEARCH_ADMIN_KEY')
+    credential = AzureKeyCredential(str(api_key))
+    index_name = os.getenv('AZURE_SEARCH_INDEX_NAME')
+    search_service_name = os.getenv("AZURE_SEARCH_ACCOUNT_NAME")
+
+    client = SearchClient(endpoint, index_name, AzureKeyCredential(api_key))
+
+    old_ctr=0
+    ids=[]
+    while(True):
+        
+        results,ctr = get_all_document_ids(client,skip=old_ctr)
+
+        ids.append(results)
+        old_ctr=old_ctr+ctr
+
+        if ctr<1000:
+            break
+
+    for batch_ids in ids:
+        dict_of_ids = [{"id": value} for value in batch_ids]
+        print(dict_of_ids)
+        client.delete_documents(documents=dict_of_ids)

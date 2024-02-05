@@ -103,18 +103,12 @@ def recreate(index: Index | None=None):
 
 @app.post("/add")
 async def add(path: FilePath):
-    try:
-        response = await u.add_file_to_index(path.path)
-        # print(response.status_code)
-        # print(response.body.decode('utf-8')) #as str
-        return response
 
-    except Exception as ex:
-        logging.error(f"An error occurred: {ex}")
-        # return {"Error": str(ex)}
-        raise HTTPException(status_code=500, detail=str(ex))
-    finally:
-        u.delete_file(path.path)
+    response = await u.add_file_to_index(path.path)
+    # print(response.status_code)
+    # print(response.body.decode('utf-8')) #as str
+    return response
+
 
 @app.post("/delete")
 def delete(path: FilePath):
