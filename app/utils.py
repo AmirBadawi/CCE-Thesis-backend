@@ -298,6 +298,7 @@ async def add_file_to_index(file_path):
         
         file_exists = file_exists_in_index(file_path)
         print("file_exists", file_exists)
+    
         if file_exists:
         
             return Response(content="file already exists: "+file_path, status_code=200)
