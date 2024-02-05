@@ -44,7 +44,7 @@ async def create_upload_file(file: UploadFile = File(...)):
     response = await add(filepath)
     
     # return {"filename": file.filename}
-    return response
+    return file_path, response
 
 # pip install python-multipart
 

@@ -3,6 +3,7 @@ import os
 import re
 import asyncio
 from fastapi import HTTPException, Response
+from fastapi.responses import FileResponse
 import json
 import uuid
 import requests 
@@ -308,7 +309,6 @@ async def add_file_to_index(file_path):
         raise HTTPException(status_code=400, detail=f"The requested file does not exist in the blob storage")
 
 
-from fastapi.responses import FileResponse
 def download_file(filename: str):
     print("down file", filename)
     file_path = os.path.join("C:\\Users\\FCC\\VS Code Projects\\Intelligencia-AI-Demo-Backend\\file", filename)
