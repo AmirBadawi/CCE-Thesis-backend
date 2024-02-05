@@ -14,15 +14,17 @@ from urllib.parse import urljoin, quote
 
 
 # Langchain
+from langchain.schema import HumanMessage
+from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain.agents import initialize_agent
 from langchain.chains import LLMChain
-from langchain.chat_models import AzureChatOpenAI
-from langchain.embeddings import OpenAIEmbeddings
+from langchain_community.chat_models import azure_openai
+from langchain_openai import OpenAIEmbeddings
 from langchain.prompts import PromptTemplate
-from langchain.vectorstores.azuresearch import AzureSearch
+from langchain_community.vectorstores.azuresearch import AzureSearch
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.document_loaders import PyPDFLoader
+from langchain_community.embeddings import azure_openai
+from langchain_community.document_loaders import PyPDFLoader
 
 
 # Our Modules
@@ -32,40 +34,61 @@ from CustomRetriever import CustomRetriever as CustomR
 # Azure
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
-from langchain.document_loaders import Docx2txtLoader
-from langchain.document_loaders import UnstructuredPowerPointLoader, UnstructuredExcelLoader, UnstructuredWordDocumentLoader
+from langchain_community.document_loaders import Docx2txtLoader
+from langchain_community.document_loaders import UnstructuredPowerPointLoader, UnstructuredExcelLoader, UnstructuredWordDocumentLoader
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient, generate_blob_sas, BlobSasPermissions
 from azure.search.documents.indexes.aio import SearchIndexClient
 from azure.search.documents.indexes.models import SearchIndex, SimpleField, ComplexField, CorsOptions, SearchableField, SearchFieldDataType, VectorSearch, SimilarityAlgorithm
 from azure.ai.formrecognizer import DocumentAnalysisClient
 
+# def get_vectorstore():
+#     try:
+#         embeddings = azure_openai(
+#             openai_api_key=os.getenv("OPENAI_API_KEY"),
+#             openai_api_base=os.getenv("OPENAI_BASE"),
+#             openai_api_version=os.getenv("OPENAI_API_VERSION", "2023-03-15-preview"),
+#             openai_api_type=os.getenv("OPENAI_TYPE", "azure"),
+#             chunk_size=1,
+#             request_timeout=10,
+#             max_retries=4,
+#             model=os.getenv("OPENAI_ADA_EMBEDDING_MODEL"),
+#         )
+#         vectorstore = AzureSearch(
+#             azure_search_endpoint=os.getenv("AZURE_SEARCH_BASE"),
+#             azure_search_key=os.getenv("AZURE_SEARCH_ADMIN_KEY"),
+#             index_name=os.getenv("AZURE_SEARCH_INDEX_NAME"),
+#             embedding_function=embeddings.embed_query,
+#         )
+#         return vectorstore
+#     except Exception:
+#         raise
+
 def get_vectorstore():
     try:
-        embeddings = OpenAIEmbeddings(
-            openai_api_key=os.getenv("OPENAI_API_KEY"),
-            openai_api_base=os.getenv("OPENAI_BASE"),
+        embeddings: AzureOpenAIEmbeddings = AzureOpenAIEmbeddings(deployment=os.getenv("OPENAI_ADA_EMBEDDING_MODEL"),openai_api_key=os.getenv("OPENAI_API_KEY"),
+            azure_endpoint=os.getenv("azure_endpoint"),
             openai_api_version=os.getenv("OPENAI_API_VERSION", "2023-03-15-preview"),
             openai_api_type=os.getenv("OPENAI_TYPE", "azure"),
             chunk_size=1,
             request_timeout=10,
             max_retries=4,
-            model=os.getenv("OPENAI_ADA_EMBEDDING_MODEL"),
-        )
-        vectorstore = AzureSearch(
+            model=os.getenv("OPENAI_ADA_EMBEDDING_MODEL"))
+        index_name: str = os.getenv("AZURE_SEARCH_INDEX_NAME")
+        vector_store: AzureSearch = AzureSearch(
             azure_search_endpoint=os.getenv("AZURE_SEARCH_BASE"),
             azure_search_key=os.getenv("AZURE_SEARCH_ADMIN_KEY"),
-            index_name=os.getenv("AZURE_SEARCH_INDEX_NAME"),
+            index_name=index_name,
             embedding_function=embeddings.embed_query,
         )
-        return vectorstore
+        return vector_store
     except Exception:
         raise
 
 def get_embeddings(text):
     try:
-        embeddings = OpenAIEmbeddings(
+        embeddings = AzureOpenAIEmbeddings(
             openai_api_key=os.getenv("OPENAI_API_KEY"),
-            openai_api_base=os.getenv("OPENAI_BASE"),
+            azure_endpoint=os.getenv("azure_endpoint"),
             openai_api_version=os.getenv("OPENAI_API_VERSION"),
             openai_api_type=os.getenv("OPENAI_TYPE"),
             chunk_size=1,
@@ -86,9 +109,9 @@ def get_custom_retriever(query):
 
 def get_chat_llm(temp = 0):
     return AzureChatOpenAI(
-        openai_api_base=os.getenv("OPENAI_BASE"),
-        OPENAI_API_VERSION=os.getenv("OPENAI_API_VERSION", "2023-03-15-preview"),
-        OPENAI_API_KEY=os.getenv("OPENAI_API_KEY"),
+        azure_endpoint=os.getenv("azure_endpoint"),
+        openai_api_version=os.getenv("OPENAI_API_VERSION", "2023-03-15-preview"),
+        openai_api_key=os.getenv("OPENAI_API_KEY"),
         openai_api_type=os.getenv("OPENAI_TYPE", "azure"),
         deployment_name=os.getenv("OPENAI_MODEL"),
         model=os.getenv("OPENAI_MODEL"),
@@ -99,9 +122,9 @@ def get_chat_llm(temp = 0):
 
 def get_chat_turbo_llm(temp = 0):
     return AzureChatOpenAI(
-        openai_api_base=os.getenv("OPENAI_BASE"),
-        OPENAI_API_VERSION=os.getenv("OPENAI_API_VERSION", "2023-03-15-preview"),
-        OPENAI_API_KEY=os.getenv("OPENAI_API_KEY"),
+        azure_endpoint=os.getenv("azure_endpoint"),
+        openai_api_version=os.getenv("OPENAI_API_VERSION", "2023-03-15-preview"),
+        openai_api_key=os.getenv("OPENAI_API_KEY"),
         openai_api_type=os.getenv("OPENAI_TYPE", "azure"),
         deployment_name=os.getenv("OPENAI_TURBO_MODEL"),
         model=os.getenv("OPENAI_TURBO_MODEL"),
@@ -427,7 +450,7 @@ def analyze_general_documents(file_path):
 
 def recursive_chunks(text):
     # tiktoken_cache_dir = "/app/tiktoken"
-    tiktoken_cache_dir = "C:/Users/FCC/VS Code Projects/KU-GPT/app/tiktoken/"
+    tiktoken_cache_dir = "/Users/mac/Projects/Intelligencia/Intelligencia-AI-Demo-Backend/app/tiktoken"
     
     os.environ["TIKTOKEN_CACHE_DIR"] = tiktoken_cache_dir
     
