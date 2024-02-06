@@ -214,6 +214,15 @@ def delete_chat_history_cosmos(conv_id):
     else:
         return {"status": "Error"}
 
+@app.delete("/history/reset")
+def delete_chat_history_cosmos():
+    response = cu.delete_all_cosmos_items()
+    if response == True:
+        return {"status": "Success"}
+
+    else:
+        return {"status": "Error"}
+
 
 def on_startup():
     if sql:
