@@ -1078,7 +1078,7 @@ def delete_file_in_index(filename):
 
     print("end", index_name)
 
-    batch=os.getenv("BATCH")
+    batch=int(os.getenv("BATCH"))
 
     client = SearchClient(endpoint, index_name, credential)
 
