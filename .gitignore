@@ -3,9 +3,6 @@ app/.venv
 /app/__pycache__
 # /.gitignore
 .env
-Dockerfile
-dockerignore
-gunicorn.conf.py
 get_documents.py
 read_json.py
 triggerr.py
