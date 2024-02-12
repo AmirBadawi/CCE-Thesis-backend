@@ -110,6 +110,7 @@ async def add(path: FilePath):
         return response
 
     except Exception as ex:
+        raise
         logging.error(f"An error occurred: {ex}")
         # return {"Error": str(ex)}
         raise HTTPException(status_code=500, detail=str(ex))
