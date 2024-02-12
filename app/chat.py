@@ -16,8 +16,9 @@ import utils as u
 
 
 # Main Chat Agent
-async def custom_agent(query, memory, conv_id, turbo):
+async def custom_agent(query, memory, conv_id, turbo, index_access):
     try:
+        print(index_access)
         response = ""
         user_intent = None
         conversation = mem.memory_to_text(memory) + "Human: " + query
@@ -25,7 +26,7 @@ async def custom_agent(query, memory, conv_id, turbo):
         if user_intent is None:
             user_intent = await detect_user_intent_async(conversation)
         print("user intent ==> " + user_intent)
-        if "general" in user_intent.strip().lower():
+        if "general" in user_intent.strip().lower() or not index_access:
             print("Entered General: ")
             response = await others_llm_async(conversation, turbo)
         else:

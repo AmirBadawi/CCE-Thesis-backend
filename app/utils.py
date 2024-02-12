@@ -457,8 +457,8 @@ def analyze_general_documents(file_path):
 
 
 def recursive_chunks(text):
-    # tiktoken_cache_dir = "/app/tiktoken"
-    tiktoken_cache_dir = "/Users/mac/Projects/Intelligencia/Intelligencia-AI-Demo-Backend/app/tiktoken"
+    tiktoken_cache_dir = "./app/tiktoken"
+    # tiktoken_cache_dir = "/Users/mac/Projects/Intelligencia/Intelligencia-AI-Demo-Backend/app/tiktoken"
     # tiktoken_cache_dir = "C:/Users/FCC/VS Code Projects/Intelligencia-AI-Demo-Backend/app/tiktoken"
     os.environ["TIKTOKEN_CACHE_DIR"] = tiktoken_cache_dir
     

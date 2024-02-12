@@ -15,6 +15,7 @@ class ChatRequest(BaseModel):
     Name: str
     email: str
     turbo: bool
+    index_access: bool
 
 
 class PDFPath(BaseModel):
