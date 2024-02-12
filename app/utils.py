@@ -66,7 +66,7 @@ from azure.ai.formrecognizer import DocumentAnalysisClient
 def get_vectorstore():
     try:
         embeddings: AzureOpenAIEmbeddings = AzureOpenAIEmbeddings(deployment=os.getenv("OPENAI_ADA_EMBEDDING_MODEL"),openai_api_key=os.getenv("OPENAI_API_KEY"),
-            azure_endpoint=os.getenv("azure_endpoint"),
+            azure_endpoint=os.getenv("OPENAI_BASE"),
             openai_api_version=os.getenv("OPENAI_API_VERSION", "2023-03-15-preview"),
             openai_api_type=os.getenv("OPENAI_TYPE", "azure"),
             chunk_size=1,
@@ -109,7 +109,7 @@ def get_custom_retriever(query):
 
 def get_chat_llm(temp = 0):
     return AzureChatOpenAI(
-        azure_endpoint=os.getenv("azure_endpoint"),
+        azure_endpoint=os.getenv("OPENAI_BASE"),
         openai_api_version=os.getenv("OPENAI_API_VERSION", "2023-03-15-preview"),
         openai_api_key=os.getenv("OPENAI_API_KEY"),
         openai_api_type=os.getenv("OPENAI_TYPE", "azure"),
@@ -122,7 +122,7 @@ def get_chat_llm(temp = 0):
 
 def get_chat_turbo_llm(temp = 0):
     return AzureChatOpenAI(
-        azure_endpoint=os.getenv("azure_endpoint"),
+        azure_endpoint=os.getenv("OPENAI_BASE"),
         openai_api_version=os.getenv("OPENAI_API_VERSION", "2023-03-15-preview"),
         openai_api_key=os.getenv("OPENAI_API_KEY"),
         openai_api_type=os.getenv("OPENAI_TYPE", "azure"),
@@ -458,8 +458,8 @@ def analyze_general_documents(file_path):
 
 def recursive_chunks(text):
     # tiktoken_cache_dir = "/app/tiktoken"
-    #tiktoken_cache_dir = "/Users/mac/Projects/Intelligencia/Intelligencia-AI-Demo-Backend/app/tiktoken"
-    tiktoken_cache_dir = "C:/Users/FCC/VS Code Projects/Intelligencia-AI-Demo-Backend/app/tiktoken"
+    tiktoken_cache_dir = "/Users/mac/Projects/Intelligencia/Intelligencia-AI-Demo-Backend/app/tiktoken"
+    # tiktoken_cache_dir = "C:/Users/FCC/VS Code Projects/Intelligencia-AI-Demo-Backend/app/tiktoken"
     os.environ["TIKTOKEN_CACHE_DIR"] = tiktoken_cache_dir
     
     # validate
