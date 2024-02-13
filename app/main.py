@@ -181,11 +181,12 @@ async def chat(request: ChatRequest):
     except asyncio.TimeoutError:
         # print("Exceeded the timeout")
         response = await e.generate_timeout_response()
+    except openai.RateLimitError:
+            print("Exception caught: "+ str(ex))
+            response = "You have exceeded the call rate limit of your current OpenAI tier. Please try again in a few seconds."
     except Exception as ex:
         print("Exception caught: "+ str(ex))
-        if isinstance(ex, openai.error.RateLimitError):
-            response = "You have exceeded the call rate limit of your current OpenAI tier. Please try again in a few seconds."
-        elif "content filter" in str(ex).lower():
+        if "content filter" in str(ex).lower():
             # response = "Intelligencia AI Virtual Assistant's content filter has been triggered! Please double check your query and make sure it conforms to our safe-usage policies."
             try:
                 response = await e.generate_content_filter_error_async(query)
