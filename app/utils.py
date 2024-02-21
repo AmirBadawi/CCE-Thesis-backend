@@ -326,7 +326,7 @@ async def add_file_to_index(file_path):
             index_name = os.getenv("AZURE_SEARCH_INDEX_NAME")
             print("name", index_name)
             index_exists = await get_azure_index(index_name)
-            print("existsssssssssssssssss", index_exists)
+            print("index exists", index_exists)
             
             if index_exists:
                 add_document_azure(documents_to_upload)
@@ -335,6 +335,8 @@ async def add_file_to_index(file_path):
                 create_azure_search_index(index_name)
                 add_document_azure(documents_to_upload)
                 # return Response(content="added file: "+file_path, status_code=200)
+            json_file_path = change_file_extension(file_path, "json")
+            delete_file(json_file_path)
             return Response(content="added file: "+file_path, status_code=200)
     else:
         raise HTTPException(status_code=400, detail=f"The requested file does not exist in the blob storage")
@@ -449,7 +451,7 @@ def analyze_general_documents(file_path):
         # create your `DocumentAnalysisClient` instance and `AzureKeyCredential` variable
         document_analysis_client = DocumentAnalysisClient(endpoint=endpoint, credential=AzureKeyCredential(api_key))
 
-        poller = document_analysis_client.begin_analyze_document("prebuilt-document", file_content)
+        poller = document_analysis_client.begin_analyze_document("prebuilt-read", file_content)
         result = poller.result()
         save_file(file_path, json.dumps(result.to_dict(), ensure_ascii=False), "json")
         
