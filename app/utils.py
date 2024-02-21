@@ -38,7 +38,7 @@ from langchain_community.document_loaders import Docx2txtLoader
 from langchain_community.document_loaders import UnstructuredPowerPointLoader, UnstructuredExcelLoader, UnstructuredWordDocumentLoader
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient, generate_blob_sas, BlobSasPermissions
 from azure.search.documents.indexes.aio import SearchIndexClient
-from azure.search.documents.indexes.models import SearchIndex, SimpleField, ComplexField, CorsOptions, SearchableField, SearchFieldDataType, VectorSearch, SimilarityAlgorithm
+from azure.search.documents.indexes.models import SearchIndex, SimpleField, ComplexField, CorsOptions, SearchableField, VectorSearch, SimilarityAlgorithm
 from azure.ai.formrecognizer import DocumentAnalysisClient
 
 # def get_vectorstore():
@@ -461,7 +461,6 @@ def recursive_chunks(text):
     # tiktoken_cache_dir = "/Users/mac/Projects/Intelligencia/Intelligencia-AI-Demo-Backend/app/tiktoken"
     # tiktoken_cache_dir = "C:/Users/FCC/VS Code Projects/Intelligencia-AI-Demo-Backend/app/tiktoken"
     os.environ["TIKTOKEN_CACHE_DIR"] = tiktoken_cache_dir
-    
     # validate
     assert os.path.exists(os.path.join(tiktoken_cache_dir,"9b5ad71b2ce5302211f9c61530b329a4922fc6a4"))
     # chunking

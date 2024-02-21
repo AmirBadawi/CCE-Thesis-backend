@@ -16,8 +16,9 @@ import utils as u
 
 
 # Main Chat Agent
-async def custom_agent(query, memory, conv_id, turbo):
+async def custom_agent(query, memory, conv_id, turbo, index_access):
     try:
+        print(index_access)
         response = ""
         user_intent = None
         conversation = mem.memory_to_text(memory) + "Human: " + query
@@ -25,7 +26,7 @@ async def custom_agent(query, memory, conv_id, turbo):
         if user_intent is None:
             user_intent = await detect_user_intent_async(conversation)
         print("user intent ==> " + user_intent)
-        if "general" in user_intent.strip().lower():
+        if "general" in user_intent.strip().lower() or index_access:
             print("Entered General: ")
             response = await others_llm_async(conversation, turbo)
         else:
@@ -166,7 +167,7 @@ async def condense_chat_async(conversation):
         question_generator = LLMChain(
             llm=u.get_chat_llm(), prompt=prompt_template, verbose=False
         )
-        new_query = question_generator({"query": conversation})
+        new_query = question_generator.invoke({"query": conversation})
         new_query = new_query["text"]
         # print(new_query)
         return new_query
@@ -183,7 +184,7 @@ async def history_related_async(memory, query):
         question_generator = LLMChain(
             llm=u.get_chat_llm(), prompt=prompt_template, verbose=False
         )
-        new_query = question_generator({"memory": history, "query": query})
+        new_query = question_generator.invoke({"memory": history, "query": query})
         new_query = new_query["text"]
         # print(new_query)
         return new_query
@@ -201,7 +202,7 @@ async def condense_query_async(memory, query, related):
             question_generator = LLMChain(
                 llm=u.get_chat_llm(), prompt=prompt_template, verbose=False
             )
-            new_query = question_generator({"query": query})
+            new_query = question_generator.invoke({"query": query})
             new_query = new_query["text"]
             print("Condensed new query:", new_query)
             return new_query
@@ -211,7 +212,7 @@ async def condense_query_async(memory, query, related):
             question_generator = LLMChain(
                 llm=u.get_chat_llm(), prompt=prompt_template, verbose=False
             )
-            new_query = question_generator({"query": query, "memory": history})
+            new_query = question_generator.invoke({"query": query, "memory": history})
             new_query = new_query["text"]
             print("Condensed new query:", new_query)
             return new_query
