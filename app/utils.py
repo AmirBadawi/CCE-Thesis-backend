@@ -103,8 +103,8 @@ def get_embeddings(text):
         raise
 
 
-def get_custom_retriever(query):
-    return CustomR(vectorstore=get_vectorstore(), query= query)
+def get_custom_retriever(query, filename):
+    return CustomR(vectorstore=get_vectorstore(), query= query, filename=filename)
 
 
 def get_chat_llm(temp = 0):
