@@ -14,12 +14,22 @@ from models import ChatRequest, FilePath, Index
 from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
 import logging
+from fastapi.middleware.cors import CORSMiddleware
 
 
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import FileResponse
 
 app = FastAPI()
+
+# Allow all origins
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 load_dotenv()
 vector_store = None
 sql = False
@@ -35,7 +45,6 @@ def root():
 
 @app.post("/uploadfile/")
 async def create_upload_file(file: UploadFile = File(...)):
-    
     # file_path = os.path.join("/file/", file.filename)
     file_path = file.filename
     filepath = FilePath(path=file_path)
@@ -138,6 +147,7 @@ async def chat(request: ChatRequest):
     query = request.Text
     query = query.replace("intelligencia", "Intelligencia")
     # print("passed in query ==> "+query)
+    print(request)
     conv_id = request.ConversationID
     response =""
     try:
@@ -146,7 +156,7 @@ async def chat(request: ChatRequest):
         # Load the memory
         memory = mem.get_memory_cosmos(conv_id)
         # print("Running the custom agent...")
-        response = await asyncio.wait_for(ch.custom_agent(query, memory, conv_id, request.turbo, request.index_access), timeout=int(os.getenv('TIMEOUT', 18)))
+        response = await asyncio.wait_for(ch.custom_agent(query, memory, conv_id, request.filename, request.turbo, request.index_access), timeout=int(os.getenv('TIMEOUT', 18)))
         # content filter
         # print("response before filtering ==> "+response)
         response = u.filter_response(response)

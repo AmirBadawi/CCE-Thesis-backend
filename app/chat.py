@@ -16,7 +16,7 @@ import utils as u
 
 
 # Main Chat Agent
-async def custom_agent(query, memory, conv_id, turbo, index_access):
+async def custom_agent(query, memory, conv_id, filename, turbo, index_access):
     try:
         print(index_access)
         response = ""
@@ -26,7 +26,7 @@ async def custom_agent(query, memory, conv_id, turbo, index_access):
         if user_intent is None:
             user_intent = await detect_user_intent_async(conversation)
         print("user intent ==> " + user_intent)
-        if "general" in user_intent.strip().lower() or index_access:
+        if "general" in user_intent.strip().lower():
             print("Entered General: ")
             response = await others_llm_async(conversation, turbo)
         else:
@@ -37,17 +37,17 @@ async def custom_agent(query, memory, conv_id, turbo, index_access):
                 query = await condense_chat_async(conversation)
                 print("======completed query======" + str(query))
             # uncondensed query
-            response = await runCompleteContextRelated_async(query=query, turbo=turbo, conversation=conversation)
+            response = await runCompleteContextRelated_async(query=query, filename=filename, turbo=turbo, conversation=conversation)
         return response
     except Exception:
         raise
 
 
-async def runCompleteContextRelated_async(query, turbo, conversation):
+async def runCompleteContextRelated_async(query, filename, turbo, conversation):
     print("Entered CompleteContextRelated:")
     try:
         print("Retrieving qa...")
-        qa = await get_retrieval_qa_async(query=query, turbo=turbo)
+        qa = await get_retrieval_qa_async(query=query, filename=filename, turbo=turbo)
         # qa = await get_qa_chain_async(memory, query)
         print("Running the qa...    ")
         response = await asyncio.wait_for(
@@ -82,7 +82,7 @@ async def others_llm_async(conversation, turbo):
     return response
 
 
-async def get_retrieval_qa_async(query, turbo, return_source=False):
+async def get_retrieval_qa_async(query, filename, turbo, return_source=False):
     # get the prompt template
     PROMPT = u.get_qabase_prompt()
     # create the chain_type_kwargs
@@ -94,7 +94,7 @@ async def get_retrieval_qa_async(query, turbo, return_source=False):
             return RetrievalQA.from_chain_type(
                 llm=u.get_chat_turbo_llm(),
                 chain_type="stuff",
-                retriever=u.get_custom_retriever(query=query),
+                retriever=u.get_custom_retriever(query=query, filename=filename),
                 chain_type_kwargs=chain_type_kwargs,
                 return_source_documents=return_source,
             )
@@ -103,7 +103,7 @@ async def get_retrieval_qa_async(query, turbo, return_source=False):
             return RetrievalQA.from_chain_type(
                 llm=u.get_chat_llm(),
                 chain_type="stuff",
-                retriever=u.get_custom_retriever(query=query),
+                retriever=u.get_custom_retriever(query=query, filename=filename),
                 chain_type_kwargs=chain_type_kwargs,
                 return_source_documents=return_source,
             )

@@ -12,6 +12,7 @@ import os
 class CustomRetriever(BaseRetriever, BaseModel):
     vectorstore: AzureSearch
     query: str
+    filename: str
 
     class Config:
         arbitrary_types_allowed = True
@@ -59,21 +60,39 @@ class CustomRetriever(BaseRetriever, BaseModel):
         top = os.getenv("Top", 10)
 
         #Define the request payload
-        payload = {
-            "search": query,
-            "queryType": "semantic",
-            # "searchFields": "title,description,content",
-            "semanticConfiguration": "semantic_config",
-            "top": top,
-            "vectorQueries": [
-                {
-                    "kind": "vector",
-                    "vector": vec,
-                    "fields": "content_vector",
-                    "k": top
-                }
-            ]   
-        }
+        if self.filename != "":
+            payload = {
+                "search": query,
+                "filter": "filename eq '"+self.filename+"'",
+                "queryType": "semantic",
+                # "searchFields": "title,description,content",
+                "semanticConfiguration": "semantic_config",
+                "top": top,
+                "vectorQueries": [
+                    {
+                        "kind": "vector",
+                        "vector": vec,
+                        "fields": "content_vector",
+                        "k": top
+                    }
+                ]   
+            }
+        else:
+            payload = {
+                "search": query,
+                "queryType": "semantic",
+                # "searchFields": "title,description,content",
+                "semanticConfiguration": "semantic_config",
+                "top": top,
+                "vectorQueries": [
+                    {
+                        "kind": "vector",
+                        "vector": vec,
+                        "fields": "content_vector",
+                        "k": top
+                    }
+                ]   
+            }
 
         # Make the POST request
         response = requests.post(api_url, json=payload, headers=headers)
@@ -90,6 +109,7 @@ class CustomRetriever(BaseRetriever, BaseModel):
                 sorted_data = self.linear_sort(data, highestFirst = True, scoreBase = "@search.rerankerScore")
             else:
                 print("Nothing been returned from the Index")
+                sorted_data = data
             # Prepare context for LLM consumption
             for doc in sorted_data:
                 print(doc["title"]+"    "+str(doc["@search.score"])+"    "+str(doc["@search.rerankerScore"]))

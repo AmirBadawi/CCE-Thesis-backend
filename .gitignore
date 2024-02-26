@@ -10,3 +10,4 @@ json_formatter.py
 
 /data/
 **/*.json
+**/*.pdf
