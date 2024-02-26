@@ -11,7 +11,7 @@ import re
 import textwrap
 from datetime import datetime
 from urllib.parse import urljoin, quote
-
+import aiohttp
 
 # Langchain
 from langchain.schema import HumanMessage
@@ -286,7 +286,7 @@ def detect_language(text):
 async def add_file_to_index(file_path):
     
     # load_blob_file(file_path)
-    print("in add file")
+    print("In add file")
     
     # response = download_file(file_path)
     # print("response: ", response)
@@ -324,10 +324,10 @@ async def add_file_to_index(file_path):
             documents_to_upload = create_documents_chunks(text_chunks)
             # print(documents_to_upload)
             index_name = os.getenv("AZURE_SEARCH_INDEX_NAME")
-            print("name", index_name)
+            # print("Index name", index_name)
             index_exists = await get_azure_index(index_name)
-            print("index exists", index_exists)
-            
+            print("Index exists", index_exists)
+            print("Adding documents to azure search index")
             if index_exists:
                 add_document_azure(documents_to_upload)
                 # return Response(content="added file: "+file_path, status_code=200)
@@ -337,6 +337,7 @@ async def add_file_to_index(file_path):
                 # return Response(content="added file: "+file_path, status_code=200)
             json_file_path = change_file_extension(file_path, "json")
             delete_file(json_file_path)
+            print("Added file: " + file_path)
             return Response(content="added file: "+file_path, status_code=200)
     else:
         raise HTTPException(status_code=400, detail=f"The requested file does not exist in the blob storage")
@@ -732,7 +733,7 @@ def create_documents_chunks(text_chunks):
 
     documents_to_upload = []
     embeddings = []
-
+    print("Creating azure documents with embeddings...")
     for i, chunk in enumerate(text_chunks):
         embedding = get_embeddings(chunk["content"])
         # embeddings.append(embedding)
@@ -748,6 +749,7 @@ def create_documents_chunks(text_chunks):
             "chunk_id": chunk["chunk_id"]
         }
         documents_to_upload.append(document)
+    print("Created azure documents with embeddings")
     return documents_to_upload
 
 
@@ -999,19 +1001,35 @@ def create_azure_search_index(index_name):
         print(f"Failed to create the index. Status code: {response.status_code}, Response: {response}")
     return response
 
-
 # Check if given index is found in azure search indexes
+
 async def get_azure_index(index_name):
     endpoint = os.getenv('AZURE_SEARCH_BASE')
     credential = AzureKeyCredential(os.getenv('AZURE_SEARCH_ADMIN_KEY'))
     print("n get:", endpoint, credential, index_name)
-    search_index_client = SearchIndexClient(endpoint=endpoint, credential=credential)
-    try:
-    # Attempt to get the index (this will raise a ResourceNotFoundError if it doesn't exist)
-        search_index = await search_index_client.get_index(index_name)
-        return True
-    except Exception:
-        return False
+    
+    async with aiohttp.ClientSession() as session:  # Properly manage client session
+        search_index_client = SearchIndexClient(endpoint=endpoint, credential=credential, session=session)
+        
+        try:
+            # Attempt to get the index (this will raise a ResourceNotFoundError if it doesn't exist)
+            search_index = await search_index_client.get_index(index_name)
+            return True
+        except Exception:
+            return False
+
+# # Check if given index is found in azure search indexes
+# async def get_azure_index(index_name):
+#     endpoint = os.getenv('AZURE_SEARCH_BASE')
+#     credential = AzureKeyCredential(os.getenv('AZURE_SEARCH_ADMIN_KEY'))
+#     print("In get azure index:", endpoint, credential, index_name)
+#     search_index_client = SearchIndexClient(endpoint=endpoint, credential=credential)
+#     try:
+#     # Attempt to get the index (this will raise a ResourceNotFoundError if it doesn't exist)
+#         search_index = await search_index_client.get_index(index_name)
+#         return True
+#     except Exception:
+#         return False
 
 
 # Delete azure search index
