@@ -425,6 +425,7 @@ def process_unknown(file_path):
     print("Unknown file type:", file_path)
 
 def process_file_by_extension(file_path):
+    print("Processing file: " + file_path)
     file_extension = file_path.split(".")[-1].lower()
 
     # Define a dictionary mapping file extensions to corresponding functions
