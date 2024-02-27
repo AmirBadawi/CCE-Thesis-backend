@@ -286,7 +286,7 @@ def detect_language(text):
 async def add_file_to_index(file_path):
     
     # load_blob_file(file_path)
-    print("In add file")
+    print("In add file: ", file_path)
     
     # response = download_file(file_path)
     # print("response: ", response)
