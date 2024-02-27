@@ -74,6 +74,26 @@ def get_record_from_cosmos(user_id, channel, default={}):
 
     return default
 
+def check_cosmos_empty():
+    # Initialize the Cosmos client
+    client = CosmosClient(os.getenv('COSMOS_ENDPOINT'), os.getenv('COSMOS_KEY'))
+
+    # Get a reference to the database and container
+    database = client.get_database_client(os.getenv('COSMOS_DB'))
+    container = database.get_container_client(os.getenv('COSMOS_COL'))
+
+    # Query all items in the container
+    items = list(container.read_all_items())
+
+    # Check if there are any items in the container
+    if not items:
+        print("Cosmos DB container is empty.")
+        return True
+    else:
+        print("Cosmos DB container is not empty.")
+        return False
+
+
 def delete_all_cosmos_items():
     # Initialize the Cosmos client
     client = CosmosClient(os.getenv('COSMOS_ENDPOINT'), os.getenv('COSMOS_KEY'))
