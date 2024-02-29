@@ -94,6 +94,8 @@ def get_embeddings(text):
             chunk_size=1,
             request_timeout=10,
             max_retries=4,
+            retry_min_seconds=10,
+            retry_max_seconds= 40,
             model=os.getenv("OPENAI_ADA_EMBEDDING_MODEL"),
         )
 
