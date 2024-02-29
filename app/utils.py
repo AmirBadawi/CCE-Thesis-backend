@@ -326,9 +326,11 @@ async def add_file_to_index(file_path):
             documents_to_upload = create_documents_chunks(text_chunks)
             # print(documents_to_upload)
             index_name = os.getenv("AZURE_SEARCH_INDEX_NAME")
-            # print("Index name", index_name)
+
+            # print("index name", index_name)
             index_exists = await get_azure_index(index_name)
             print("Index exists", index_exists)
+
             print("Adding documents to azure search index")
             if index_exists:
                 add_documents_in_batches(documents_to_upload)
@@ -339,7 +341,9 @@ async def add_file_to_index(file_path):
                 # return Response(content="added file: "+file_path, status_code=200)
             json_file_path = change_file_extension(file_path, "json")
             delete_file(json_file_path)
+
             print("Added file: " + file_path)
+
             return Response(content="added file: "+file_path, status_code=200)
     else:
         raise HTTPException(status_code=400, detail=f"The requested file does not exist in the blob storage")
@@ -752,7 +756,9 @@ def create_documents_chunks(text_chunks):
             "chunk_id": chunk["chunk_id"]
         }
         documents_to_upload.append(document)
+
     print("Created azure documents with embeddings")
+
     return documents_to_upload
 
 
@@ -1028,7 +1034,9 @@ def create_azure_search_index(index_name):
 async def get_azure_index(index_name):
     endpoint = os.getenv('AZURE_SEARCH_BASE')
     credential = AzureKeyCredential(os.getenv('AZURE_SEARCH_ADMIN_KEY'))
-    print("n get:", endpoint, credential, index_name)
+
+    print("in get azure index:", endpoint, credential, index_name)
+
     
     async with aiohttp.ClientSession() as session:  # Properly manage client session
         search_index_client = SearchIndexClient(endpoint=endpoint, credential=credential, session=session)
@@ -1044,7 +1052,9 @@ async def get_azure_index(index_name):
 # async def get_azure_index(index_name):
 #     endpoint = os.getenv('AZURE_SEARCH_BASE')
 #     credential = AzureKeyCredential(os.getenv('AZURE_SEARCH_ADMIN_KEY'))
+
 #     print("In get azure index:", endpoint, credential, index_name)
+
 #     search_index_client = SearchIndexClient(endpoint=endpoint, credential=credential)
 #     try:
 #     # Attempt to get the index (this will raise a ResourceNotFoundError if it doesn't exist)
