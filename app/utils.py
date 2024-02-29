@@ -330,11 +330,11 @@ async def add_file_to_index(file_path):
             
             print("Adding documents to azure search index")
             if index_exists:
-                add_document_azure(documents_to_upload)
+                add_documents_in_batches(documents_to_upload)
                 # return Response(content="added file: "+file_path, status_code=200)
             else:
                 create_azure_search_index(index_name)
-                add_document_azure(documents_to_upload)
+                add_documents_in_batches(documents_to_upload)
                 # return Response(content="added file: "+file_path, status_code=200)
             json_file_path = change_file_extension(file_path, "json")
             delete_file(json_file_path)
@@ -773,6 +773,25 @@ def change_file_extension(file_path, new_extension):
     # Create the new file name with the desired extension
     new_file_name = os.path.join(folder_path, f"{base_name}.{new_extension}")
     return new_file_name
+
+
+def add_documents_in_batches(documents_to_index, type, batch_size=500):
+    endpoint = os.getenv('AZURE_SEARCH_BASE')
+    api_key = os.getenv('AZURE_SEARCH_ADMIN_KEY')
+    credential = AzureKeyCredential(os.getenv('AZURE_SEARCH_ADMIN_KEY'))
+    index_name = os.getenv('AZURE_SEARCH_INDEX_NAME')
+
+    search_client = SearchClient(endpoint=endpoint, index_name=index_name, credential=credential)
+
+    # Split the documents into batches
+    for i in range(0, len(documents_to_index), batch_size):
+        batch = documents_to_index[i:i + batch_size]
+
+        # Upload each batch of documents
+        indexing = search_client.upload_documents(documents=batch)
+        print(f"batch {i} done")
+
+    return "Documents uploaded successfully"
 
 
 # Adds document to azure search index
