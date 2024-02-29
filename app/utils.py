@@ -11,7 +11,7 @@ import re
 import textwrap
 from datetime import datetime
 from urllib.parse import urljoin, quote
-
+import aiohttp
 
 # Langchain
 from langchain.schema import HumanMessage
@@ -94,6 +94,8 @@ def get_embeddings(text):
             chunk_size=1,
             request_timeout=10,
             max_retries=4,
+            retry_min_seconds=10,
+            retry_max_seconds= 40,
             model=os.getenv("OPENAI_ADA_EMBEDDING_MODEL"),
         )
 
@@ -324,19 +326,21 @@ async def add_file_to_index(file_path):
             documents_to_upload = create_documents_chunks(text_chunks)
             # print(documents_to_upload)
             index_name = os.getenv("AZURE_SEARCH_INDEX_NAME")
-            print("name", index_name)
+            # print("index name", index_name)
             index_exists = await get_azure_index(index_name)
-            print("index exists", index_exists)
+            print("Index exists", index_exists)
             
+            print("Adding documents to azure search index")
             if index_exists:
-                add_document_azure(documents_to_upload)
+                add_documents_in_batches(documents_to_upload)
                 # return Response(content="added file: "+file_path, status_code=200)
             else:
                 create_azure_search_index(index_name)
-                add_document_azure(documents_to_upload)
+                add_documents_in_batches(documents_to_upload)
                 # return Response(content="added file: "+file_path, status_code=200)
             json_file_path = change_file_extension(file_path, "json")
             delete_file(json_file_path)
+            print("added file: " + file_path)
             return Response(content="added file: "+file_path, status_code=200)
     else:
         raise HTTPException(status_code=400, detail=f"The requested file does not exist in the blob storage")
@@ -732,7 +736,7 @@ def create_documents_chunks(text_chunks):
 
     documents_to_upload = []
     embeddings = []
-
+    print("Creating azure documents with embeddings...")
     for i, chunk in enumerate(text_chunks):
         embedding = get_embeddings(chunk["content"])
         # embeddings.append(embedding)
@@ -748,6 +752,7 @@ def create_documents_chunks(text_chunks):
             "chunk_id": chunk["chunk_id"]
         }
         documents_to_upload.append(document)
+    print("Documents created with embeddings")
     return documents_to_upload
 
 
@@ -770,6 +775,25 @@ def change_file_extension(file_path, new_extension):
     # Create the new file name with the desired extension
     new_file_name = os.path.join(folder_path, f"{base_name}.{new_extension}")
     return new_file_name
+
+
+def add_documents_in_batches(documents_to_index, type, batch_size=500):
+    endpoint = os.getenv('AZURE_SEARCH_BASE')
+    api_key = os.getenv('AZURE_SEARCH_ADMIN_KEY')
+    credential = AzureKeyCredential(os.getenv('AZURE_SEARCH_ADMIN_KEY'))
+    index_name = os.getenv('AZURE_SEARCH_INDEX_NAME')
+
+    search_client = SearchClient(endpoint=endpoint, index_name=index_name, credential=credential)
+
+    # Split the documents into batches
+    for i in range(0, len(documents_to_index), batch_size):
+        batch = documents_to_index[i:i + batch_size]
+
+        # Upload each batch of documents
+        indexing = search_client.upload_documents(documents=batch)
+        print(f"batch {i} done")
+
+    return "Documents uploaded successfully"
 
 
 # Adds document to azure search index
@@ -1004,14 +1028,30 @@ def create_azure_search_index(index_name):
 async def get_azure_index(index_name):
     endpoint = os.getenv('AZURE_SEARCH_BASE')
     credential = AzureKeyCredential(os.getenv('AZURE_SEARCH_ADMIN_KEY'))
-    print("n get:", endpoint, credential, index_name)
-    search_index_client = SearchIndexClient(endpoint=endpoint, credential=credential)
-    try:
-    # Attempt to get the index (this will raise a ResourceNotFoundError if it doesn't exist)
-        search_index = await search_index_client.get_index(index_name)
-        return True
-    except Exception:
-        return False
+    print("in get azure index:", endpoint, credential, index_name)
+    
+    async with aiohttp.ClientSession() as session:  # Properly manage client session
+        search_index_client = SearchIndexClient(endpoint=endpoint, credential=credential, session=session)
+        
+        try:
+            # Attempt to get the index (this will raise a ResourceNotFoundError if it doesn't exist)
+            search_index = await search_index_client.get_index(index_name)
+            return True
+        except Exception:
+            return False
+
+# # Check if given index is found in azure search indexes
+# async def get_azure_index(index_name):
+#     endpoint = os.getenv('AZURE_SEARCH_BASE')
+#     credential = AzureKeyCredential(os.getenv('AZURE_SEARCH_ADMIN_KEY'))
+#     print("n get:", endpoint, credential, index_name)
+#     search_index_client = SearchIndexClient(endpoint=endpoint, credential=credential)
+#     try:
+#     # Attempt to get the index (this will raise a ResourceNotFoundError if it doesn't exist)
+#         search_index = await search_index_client.get_index(index_name)
+#         return True
+#     except Exception:
+#         return False
 
 
 # Delete azure search index
