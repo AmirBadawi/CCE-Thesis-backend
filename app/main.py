@@ -214,10 +214,27 @@ async def stream_chat(request: ChatRequest):
         
         return StreamingResponse(generator, media_type="text/event-stream")
 
-    except Exception as e:
-        # Log the exception for debugging purposes
-        print(f"An error occurred: {str(e)}")
-        return {"error": "An error occurred while processing the request"}
+    except asyncio.TimeoutError:
+        # print("Exceeded the timeout")
+        return await e.generate_timeout_response()
+    except openai.RateLimitError:
+            # print("Exception caught: "+ str(ex))
+            return "You have exceeded the call rate limit of your current OpenAI tier. Please try again in a few seconds."
+    except Exception as ex:
+        print("Exception caught: "+ str(ex))
+        if "content filter" in str(ex).lower():
+            # response = "Intelligencia AI Virtual Assistant's content filter has been triggered! Please double check your query and make sure it conforms to our safe-usage policies."
+            try:
+                return await e.generate_content_filter_error_async(query)
+            except:
+                return "Intelligencia AI Virtual Assistant's content filter has been triggered! Please double check your query and make sure it conforms to our safe-usage policies."
+        else:
+            try:
+                return await e.generate_userfriendly_error_response()
+            except:
+                return "We ran into a problem! Please try again later."
+            # return {"response": "We ran into a problem! Please try again later."}
+            # return {"response": str(ex)}
 
 @app.delete("/history/cosmos/{conv_id}")
 def delete_chat_history_cosmos(conv_id):
