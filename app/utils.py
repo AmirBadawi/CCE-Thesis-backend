@@ -25,6 +25,7 @@ from langchain_community.vectorstores.azuresearch import AzureSearch
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import azure_openai
 from langchain_community.document_loaders import PyPDFLoader
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
 
 # Our Modules
@@ -109,31 +110,31 @@ def get_custom_retriever(query, filename):
     return CustomR(vectorstore=get_vectorstore(), query= query, filename=filename)
 
 
-def get_chat_llm(temp = 0):
+def get_chat_llm(model = os.getenv("OPENAI_MODEL"), temp = 0):
     return AzureChatOpenAI(
         azure_endpoint=os.getenv("OPENAI_BASE"),
         openai_api_version=os.getenv("OPENAI_API_VERSION", "2023-03-15-preview"),
         openai_api_key=os.getenv("OPENAI_API_KEY"),
         openai_api_type=os.getenv("OPENAI_TYPE", "azure"),
         deployment_name=os.getenv("OPENAI_MODEL"),
-        model=os.getenv("OPENAI_MODEL"),
+        model=model,
         verbose=False,
-        temperature=temp,
+        temperature=temp
     )
 
-
-def get_chat_turbo_llm(temp = 0):
+def get_chat_llm_stream(callback, model = os.getenv("OPENAI_MODEL"), streaming = False, temp = 0):
     return AzureChatOpenAI(
         azure_endpoint=os.getenv("OPENAI_BASE"),
         openai_api_version=os.getenv("OPENAI_API_VERSION", "2023-03-15-preview"),
         openai_api_key=os.getenv("OPENAI_API_KEY"),
         openai_api_type=os.getenv("OPENAI_TYPE", "azure"),
-        deployment_name=os.getenv("OPENAI_TURBO_MODEL"),
-        model=os.getenv("OPENAI_TURBO_MODEL"),
+        deployment_name=model,
+        model=model,
         verbose=False,
         temperature=temp,
+        streaming=streaming,
+        callbacks=[callback]
     )
-
 
 def read_prompt_from_file(file):
     data = ""
@@ -217,7 +218,7 @@ async def content_filter_async(query, gpt4model=False):
                 verbose=False,
             )
         else:
-            llm = get_chat_turbo_llm()
+            llm = get_chat_llm()
             llm_chain = LLMChain(
                 llm=llm,
                 prompt=prompt,

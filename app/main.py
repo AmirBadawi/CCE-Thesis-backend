@@ -2,6 +2,7 @@ import uvicorn
 import os
 import asyncio
 import chat as ch
+import chat_streaming as ch_s
 import memory as mem
 import cosmos_utils as cu
 import utils as u
@@ -17,8 +18,10 @@ import logging
 from fastapi.middleware.cors import CORSMiddleware
 
 
+
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import FileResponse
+from fastapi.responses import StreamingResponse
 
 app = FastAPI()
 
@@ -51,7 +54,7 @@ async def create_upload_file(file: UploadFile = File(...)):
     with open(filepath.path, "wb") as f:
         f.write(file.file.read())
     response = await add(filepath)
-    
+
     # return {"filename": file.filename}
     return file_path, response
 
@@ -157,6 +160,7 @@ async def chat(request: ChatRequest):
         memory = mem.get_memory_cosmos(conv_id)
         # print("Running the custom agent...")
         response = await asyncio.wait_for(ch.custom_agent(query, memory, conv_id, request.filename, request.turbo, request.index_access), timeout=int(os.getenv('TIMEOUT', 18)))
+        print(response)
         # content filter
         # print("response before filtering ==> "+response)
         response = u.filter_response(response)
@@ -167,27 +171,7 @@ async def chat(request: ChatRequest):
         mem.save_memory_cosmos(memory, conv_id)
         # Conversation logging
         if sql:
-            myobj = {
-                "ConversationID": conv_id,
-                "Text": query,
-                "UserID": request.UserID,
-                "email": request.email,
-                "Name": request.Name,
-                "BotID": request.BotID,
-                "chat_timestamp": request.Time
-            }
-            # print("Started the API call in the background")
-            asyncio.create_task(db.log_conversation(
-                conversation_id=myobj["ConversationID"],
-                user_message=myobj["Text"],
-                ai_message=response,
-                user_id=myobj["UserID"],
-                user_email=myobj["email"],
-                user_name=myobj["Name"],
-                bot_id=myobj["BotID"],
-                inserted_timestamp = datetime.datetime.fromtimestamp(time.time()),
-                chat_timestamp=myobj["chat_timestamp"]
-            ))
+            db.log_to_sql(conv_id=conv_id, query=query, request=request, response=response)
     except asyncio.TimeoutError:
         # print("Exceeded the timeout")
         response = await e.generate_timeout_response()
@@ -202,7 +186,6 @@ async def chat(request: ChatRequest):
                 response = await e.generate_content_filter_error_async(query)
             except:
                 return {"response": "Intelligencia AI Virtual Assistant's content filter has been triggered! Please double check your query and make sure it conforms to our safe-usage policies."}
-            
         else:
             try:
                 response = await e.generate_userfriendly_error_response()
@@ -214,6 +197,27 @@ async def chat(request: ChatRequest):
     return {"response": response.strip()}
     # return response
 
+@app.post("/stream_chat")
+async def stream_chat(request: ChatRequest):
+    try:
+        print(request)
+        if not request.Text or not request.ConversationID:
+            return {"bad request": "no query"}
+        if request.Text.strip().lower() == "reset":
+            delete_chat_history_cosmos(request.ConversationID)
+            return {"response": "Chat history was deleted successfully"}
+        
+        query = request.Text.replace("intelligencia", "Intelligencia")
+        conv_id = request.ConversationID
+
+        generator = ch_s.custom_agent(query, conv_id, request, sql)
+        
+        return StreamingResponse(generator, media_type="text/event-stream")
+
+    except Exception as e:
+        # Log the exception for debugging purposes
+        print(f"An error occurred: {str(e)}")
+        return {"error": "An error occurred while processing the request"}
 
 @app.delete("/history/cosmos/{conv_id}")
 def delete_chat_history_cosmos(conv_id):

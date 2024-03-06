@@ -109,7 +109,7 @@ async def generate_userfriendly_error_response():
 async def generate_content_filter_error_async(query):
     prompt = u.get_prompt("content_filter_error.txt")
     try:
-        llm = u.get_chat_turbo_llm(0.7)
+        llm = u.get_chat_llm(0.7)
         llm_chain = LLMChain(
             llm=llm,
             prompt=prompt,

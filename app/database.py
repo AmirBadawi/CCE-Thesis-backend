@@ -4,6 +4,8 @@ import pyodbc
 import os
 from dotenv import load_dotenv
 from urllib import parse
+import datetime
+import time
 
 
 def azure_sql_connection(user, password, hostname, database_name, driver):
@@ -190,3 +192,26 @@ def check_file_in_index_status(data):
     finally:
         cursor.close()
         conn.close()
+
+def log_to_sql(conv_id, query, request, response):
+    myobj = {
+                "ConversationID": conv_id,
+                "Text": query,
+                "UserID": request.UserID,
+                "email": request.email,
+                "Name": request.Name,
+                "BotID": request.BotID,
+                "chat_timestamp": request.Time
+            }
+    # print("Started the API call in the background")
+    asyncio.create_task(log_conversation(
+        conversation_id=myobj["ConversationID"],
+        user_message=myobj["Text"],
+        ai_message=response,
+        user_id=myobj["UserID"],
+        user_email=myobj["email"],
+        user_name=myobj["Name"],
+        bot_id=myobj["BotID"],
+        inserted_timestamp = datetime.datetime.fromtimestamp(time.time()),
+        chat_timestamp=myobj["chat_timestamp"]
+    ))

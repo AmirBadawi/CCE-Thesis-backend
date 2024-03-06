@@ -1,6 +1,8 @@
 # General
 import os
 import asyncio
+from typing import AsyncIterator, Dict, Any
+from typing import AsyncIterable
 
 # Langchain
 from langchain.chains import ConversationalRetrievalChain, LLMChain, RetrievalQA
@@ -9,14 +11,23 @@ from langchain_community.llms.azureml_endpoint import (
     AzureMLEndpointApiType,
     LlamaContentFormatter,
 )
+from fastapi.responses import StreamingResponse
+from langchain.callbacks import AsyncIteratorCallbackHandler
+from langchain.schema import HumanMessage
+from pydantic import BaseModel
 
 # Our Modules
 import memory as mem
 import utils as u
+import database as db
 
 
 # Main Chat Agent
-async def custom_agent(query, memory, conv_id, filename, turbo, index_access):
+async def custom_agent(query, conv_id, request, sql) -> AsyncIterable[str]:
+    callback = AsyncIteratorCallbackHandler()
+    filename, turbo, index_access = request.filename, request.turbo, request.index_access
+    task = None
+    memory = mem.get_memory_cosmos(conv_id)
     try:
         print(index_access)
         response = ""
@@ -28,7 +39,7 @@ async def custom_agent(query, memory, conv_id, filename, turbo, index_access):
         print("user intent ==> " + user_intent)
         if "general" in user_intent.strip().lower() or not index_access:
             print("Entered General: ")
-            response = await others_llm_async(conversation, turbo)
+            task = asyncio.create_task(others_llm_async(conversation, turbo, callback))
         else:
             print("Entered Intelligencia Knowledge Base: ")
             is_complete = await is_complete_async(query=query)
@@ -36,18 +47,33 @@ async def custom_agent(query, memory, conv_id, filename, turbo, index_access):
             if "incomplete" in str(is_complete).lower():
                 query = await condense_chat_async(conversation)
                 print("======completed query======" + str(query))
-            # uncondensed query
-            response = await runCompleteContextRelated_async(query=query, filename=filename, turbo=turbo, conversation=conversation)
-        return response
+            task = asyncio.create_task(
+                runCompleteContextRelated_async(query=query, filename=filename, turbo=turbo, conversation=conversation, callback = callback)
+            )
+
+        async for token in callback.aiter():
+            response += token
+            yield token
+
+        if task is not None:
+            await task
+            memory.save_context({"Human": query}, {"AI": response})
+            mem.save_memory_cosmos(memory, conv_id)
+            # Conversation logging
+            if sql:
+                db.log_to_sql(conv_id=conv_id, query=query, request=request, response=response)
+
     except Exception:
         raise
+    finally:
+        callback.done.set()
 
 
-async def runCompleteContextRelated_async(query, filename, turbo, conversation):
+async def runCompleteContextRelated_async(query, filename, turbo, conversation, callback):
     print("Entered CompleteContextRelated:")
     try:
         print("Retrieving qa...")
-        qa = await get_retrieval_qa_async(query=query, filename=filename, turbo=turbo)
+        qa = await get_retrieval_qa_async(query=query, filename=filename, turbo=turbo, callback = callback)
         # qa = await get_qa_chain_async(memory, query)
         print("Running the qa...    ")
         response = await asyncio.wait_for(
@@ -59,18 +85,18 @@ async def runCompleteContextRelated_async(query, filename, turbo, conversation):
     except Exception:
         raise
 
-
-async def others_llm_async(conversation, turbo):
+async def others_llm_async(conversation, turbo, callback):
     # print("Entered Others:")
     prompt = u.get_prompt("base.txt")
     # history = mem.memory_to_text(memory)
     try:
         if turbo == True:
             print("Turbo GPT ON")
-            llm=u.get_chat_llm(model=os.getenv("OPENAI_TURBO_MODEL"))
+            llm=u.get_chat_llm_stream(callback, model=os.getenv("OPENAI_TURBO_MODEL"), streaming=True)
         else:
             print("Turbo GPT OFF")
-            llm=u.get_chat_llm()
+            llm=u.get_chat_llm_stream(callback, streaming=True)
+            print("After")
         llm_chain = LLMChain(llm=llm, prompt=prompt, verbose=False)
         print("Running the llm_chain...")
         response = await asyncio.wait_for(
@@ -82,7 +108,7 @@ async def others_llm_async(conversation, turbo):
     return response
 
 
-async def get_retrieval_qa_async(query, filename, turbo, return_source=False):
+async def get_retrieval_qa_async(query, filename, turbo, callback, return_source=False):
     # get the prompt template
     PROMPT = u.get_qabase_prompt()
     # create the chain_type_kwargs
@@ -91,10 +117,10 @@ async def get_retrieval_qa_async(query, filename, turbo, return_source=False):
         # create the RetrievalQA instance and return it (independent from memory)
         if turbo == True:
             print("Turbo GPT ON")
-            llm=u.get_chat_llm(model=os.getenv("OPENAI_TURBO_MODEL"))
+            llm=u.get_chat_llm_stream(callback, model=os.getenv("OPENAI_TURBO_MODEL"), streaming=True)
         else:
             print("Turbo GPT OFF")
-            llm=u.get_chat_llm()
+            llm=u.get_chat_llm_stream(callback, streaming=True)
         return RetrievalQA.from_chain_type(
             llm=llm,
             chain_type="stuff",
@@ -120,6 +146,7 @@ async def get_qa_chain_async(memory, return_source=False):
 
 
 async def detect_user_intent_async(conversation):
+    callback = AsyncIteratorCallbackHandler()
     prompt = u.get_prompt("intent.txt")
     final_prompt = prompt.format(query=conversation)
     try:
