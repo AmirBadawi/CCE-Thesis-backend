@@ -784,7 +784,7 @@ def change_file_extension(file_path, new_extension):
     return new_file_name
 
 
-def add_documents_in_batches(documents_to_index, type, batch_size=500):
+def add_documents_in_batches(documents_to_index, batch_size=500):
     endpoint = os.getenv('AZURE_SEARCH_BASE')
     api_key = os.getenv('AZURE_SEARCH_ADMIN_KEY')
     credential = AzureKeyCredential(os.getenv('AZURE_SEARCH_ADMIN_KEY'))
